@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finssim-workspace"
+version = "0.1.0"
+description = "Top-level workspace tooling for the FinsSim underwater simulation platform."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "lark>=1.1,<2",
+    "pyyaml>=6,<7",
+    "setuptools>=61,<82",
+    "tensorboard>=2.20.0",
+    "typer>=0.12,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.8,<1",
+]
+
+[tool.uv.workspace]
+members = [
+    "python/finssim_core",
+    "python/finssim_cli",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+finssim-core = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

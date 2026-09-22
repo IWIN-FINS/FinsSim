@@ -1,0 +1,185 @@
+schema_version: 1
+experiment_id: E5-T1-UNITY-ROS2-NORMALIZED-MAXFORCE-NODR
+status: ready_for_static_water_simulation
+description: >-
+  Unity/MARUS T1 protocol for NoDR checkpoints trained in
+  HoldForPosition_Fossen_Parallel_30s_NormalizedMaxForce_NoDR. The protocol
+  preserves the training action ABI: the direct 8D policy remains normalized
+  while Unity maps it to each thruster's current maximum force; the 6D policy
+  keeps its training-time physical wrench allocator and force-N output.
+
+runner:
+  mode: unity_ros2_t1
+  require_explicit_arm_flag: false
+  simulation_clock:
+    mode: ros2_control_lockstep
+    use_sim_time: true
+    clock_topic: /clock
+    time_scale: 10.0
+    clock_start_timeout_wall_sec: 30.0
+    clock_stall_timeout_wall_sec: 15.0
+    lockstep_ack_topic: /sim/motion_controller/debug/control_tick_complete
+    lockstep_ack_timeout_wall_sec: 15.0
+  auto_launch:
+    enabled: true
+    startup_timeout_sec: 120.0
+    startup_settle_sec: 3.0
+    terminate_timeout_sec: 15.0
+    recorder_finalize_timeout_sec: 90.0
+    grpc_adapter:
+      script: ros2_ws/scripts/launch_grpc_ros_adapter.sh
+      args: ["topic_prefix:=/sim"]
+    reset_service:
+      package: motion_control
+      executable: reset_service
+      reset_topic: /sim/finsrov/reset
+      thruster_topic: /sim/finsrov/thrusters_out
+      cancel_topic: /sim/motion_controller/command/cancel
+      service_name: /sim/motion_controller/reset_vehicle
+    unity_gui:
+      editor_executable: ${UNITY_EDITOR_PATH}
+      project_path: simulators/unity/marus-example
+      scene_path: ./simulators/unity/marus-example/Assets/Scenes/HoldForPosition_Fossen_Parallel_30s_NormalizedMaxForce_NoDR.unity
+      command_file: /tmp/unity_play_command
+      status_file: /tmp/unity_play_status.json
+      prepare_command: prepare_ros_evaluation_scene
+      start_command: play
+      stop_command: stop
+      stop_play_mode_on_exit: true
+      status_timeout_sec: 360.0
+    motion_controller:
+      package: motion_control
+      launch_file: motion_controller.launch.py
+      state_input_mode: sim_truth
+      pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+    required_support_topics:
+      - /sim/finsrov/controller/pose
+      - /sim/finsrov/controller/imu
+      - /sim/finsrov/controller/depth
+      - /sim/finsrov/controller/dvl
+    required_controller_topics:
+      - /sim/finsrov/controller/state/status
+      - /sim/motion_controller/debug/observation
+      - /sim/motion_controller/debug/thruster_command
+      - /sim/motion_controller/debug/thruster_command_stamped
+      - /sim/motion_controller/debug/control_tick_complete
+  runtime_status:
+    log_interval_sec: 10.0
+    pose_stale_after_sec: 0.50
+  logging:
+    root: ros2_ws/data/experiments
+    recorder_profile: t1_sim
+    event_topic: /finsrov/experiment/event
+    session_output_layout: <run_id>/trials/<session_id>
+
+coordinate_contract:
+  state_frame: controller_world
+  source: unity_vehicle_ros_bridge_sim_truth
+  axes:
+    x: surge_position_m
+    y: depth_position_m_up_positive
+    z: sway_position_m
+    yaw: yaw_deg_about_controller_y
+  active_dofs: [x, y_depth, z, yaw]
+  uncontrolled_dofs: [roll, pitch]
+  ros_to_controller_basis_indices: [0, 1, 2]
+  ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+
+environment:
+  hydrodynamics_backend: fossen
+  water_condition: static_water
+  domain_randomization_at_evaluation: false
+  scene_domain_randomization: disabled
+  note: >-
+    The selected checkpoint and Unity scene are both NoDR variants. This
+    evaluation injects no currents, waves, reset-time randomization, or
+    scene-level domain randomization.
+
+controllers:
+  PPO_WRENCH6:
+    storage_subdirectory: PPO_WRENCH6
+    enabled: true
+    label: ppo_wrench6_normalized_maxforce_nodr_sim
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator_sim_evaluation.yaml
+    checkpoint_required: true
+    expected_backend_name: ppo_wrench_for_pose_physical_wrench_allocator
+    action_interface: normalized_wrench6_to_training_allocator_to_canonical_thruster8
+    policy_order: [surge, sway, heave, roll, pitch, yaw]
+    control_rate_hz: 10.0
+    unity_sim_thruster_command_mode: force_n
+  PPO_THRUSTER8:
+    storage_subdirectory: PPO_THRUSTER8
+    enabled: true
+    label: ppo_thruster8_normalized_maxforce_nodr_sim
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_control_for_pose_thruster8_raw_action_sim.yaml
+    checkpoint_required: true
+    expected_backend_name: ppo_control_for_pose
+    action_interface: raw_canonical_thruster8_to_training_maxforce_mapping
+    policy_order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF]
+    control_rate_hz: 10.0
+    unity_sim_thruster_command_mode: normalized_direct
+
+target_points:
+  coordinate_frame: controller_world
+  water_surface_y_m: 0.0
+  points:
+    P01_front_left_shallow:  {x_m:  1.00, y_depth_m: -0.50, z_m:  0.30, yaw_deg:   0.0}
+    P02_front_right_shallow: {x_m:  1.00, y_depth_m: -0.50, z_m: -0.30, yaw_deg: -90.0}
+    P03_rear_right_shallow:  {x_m: -1.00, y_depth_m: -0.50, z_m: -0.30, yaw_deg:  90.0}
+    P04_rear_left_shallow:   {x_m: -1.00, y_depth_m: -0.50, z_m:  0.30, yaw_deg: 180.0}
+    P05_front_left_deep:     {x_m:  1.00, y_depth_m: -0.80, z_m:  0.30, yaw_deg:   0.0}
+    P06_front_right_deep:    {x_m:  1.00, y_depth_m: -0.80, z_m: -0.30, yaw_deg: -90.0}
+    P07_rear_right_deep:     {x_m: -1.00, y_depth_m: -0.80, z_m: -0.30, yaw_deg:  90.0}
+    P08_rear_left_deep:      {x_m: -1.00, y_depth_m: -0.80, z_m:  0.30, yaw_deg: 180.0}
+
+initial_condition:
+  reset_pose_controller_world: [0.0, 0.0, 0.0, 0.0]
+  settle_before_goal_sec: 5.0
+
+trial_protocol:
+  controllers: [PPO_WRENCH6, PPO_THRUSTER8]
+  setpoints: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow,
+              P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+  repeats_per_controller_and_setpoint: 1
+  pre_goal_record_sec: 5.0
+  control_duration_sec: 60.0
+  post_goal_record_sec: 5.0
+  inter_trial_interval_sec: 0.0
+  required_events: [session_start, trial_start, phase_start, hold_start, phase_end, trial_end]
+  failure_events: [operator_abort, state_timeout, controller_fault, unity_process_exit]
+
+metric_protocol:
+  statistical_unit: trial
+  evaluation_window:
+    start_after_event: hold_start
+    start_offset_sec: 40.0
+    duration_sec: 20.0
+    resample_hz: 10.0
+    max_interpolation_gap_sec: 0.25
+    minimum_valid_fraction: 0.90
+  response_window:
+    start_after_event: hold_start
+    duration_sec: 60.0
+  settling_time:
+    required_continuous_sec: 10.0
+  errors:
+    position_axes: [x, z]
+    depth_axis: y_depth
+    yaw_axis: yaw
+  success_definition:
+    all_controlled_errors_within: {x_m: 0.10, depth_m: 0.10, z_m: 0.10, yaw_deg: 10.0}
+    velocity_within: {linear_mps: 0.05, yaw_rate_deg_s: 5.0}
+    continuous_hold_sec: 10.0
+  reported_metrics:
+    - rmse
+    - p95_absolute_error
+    - steady_state_abs_error_mean
+    - steady_state_signed_error_mean
+    - settling_time_sec
+    - success_rate
+  diagnostics:
+    - command_effort_proxy
+    - allocation_residual_norm
+    - thruster_saturation_fraction
+    - max_abs_roll_deg
+    - max_abs_pitch_deg

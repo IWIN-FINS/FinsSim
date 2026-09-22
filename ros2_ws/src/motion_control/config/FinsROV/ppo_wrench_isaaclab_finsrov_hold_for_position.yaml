@@ -1,0 +1,76 @@
+# Deployment profile for FinsSim-FinsROV-HoldForPosition-Wrench-v0.
+# The checkpoint is an IsaacLab RSL-RL .pt actor with the 16D Unity-compatible
+# observation and six normalized physical-wrench actions.
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    backend_name: isaaclab_finsrov_hold_for_position_wrench
+    action_schema: finsrov_physical_wrench_sim7n_v2
+    checkpoint_status: retraining_required
+    checkpoint_path: ""
+
+    device: cuda
+    control_rate_hz: 10.0
+    # Training has no policy-side action rate limiter.
+    policy_action_rate_limit_per_sec: 0.0
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    thruster_output_mode: wrench6d_force_n
+    # The Isaac wrench task uses a symmetric simulator actuator envelope.
+    thruster_force_limits_n:
+      positive: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+      negative: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+
+    # Policy order: [surge, sway, heave, roll, pitch, yaw].
+    # The task controls 3D position plus yaw; roll and pitch stay in the 6D
+    # ABI but are masked here to match the task's default configuration.
+    wrench6d:
+      allocation_mode: physical_wrench_allocator
+      policy_axis_order: legacy_surge_sway_heave
+      wrench_limits: [19.528527, 18.415027, 22.501886, 3.863995, 3.079985, 7.080833]
+      wrench_scale: [1.0, 1.0, 1.0, 0.0, 0.0, 1.0]
+
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+    debug_observation_topic: /motion_controller/debug/observation
+    debug_action_topic: /motion_controller/debug/action
+    debug_wrench6d_topic: /motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /motion_controller/debug/thruster_command
+    debug_policy_info_topic: /motion_controller/debug/policy_info
+
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

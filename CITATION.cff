@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use FinsSim in academic work, please cite it using this metadata."
+title: "FinsSim: An Underwater Robotics Simulation and Learning Platform"
+type: software
+authors:
+  - name: IWIN-FINS
+version: 0.1.0
+license: Apache-2.0
+repository-code: "https://github.com/IWIN-FINS/FinsSim"
+url: "https://github.com/IWIN-FINS/FinsSim"
+abstract: >-
+  An end-to-end platform for FinsROV underwater-robot simulation,
+  reinforcement learning, ROS 2 control, hydrodynamic identification,
+  and sim-to-real evaluation.
+preferred-citation:
+  type: article
+  title: "FinsSim: A Reality-Aligned Integrated Simulation Platform for Underwater Robot Learning"
+  authors:
+    - family-names: Zhang
+      given-names: Yu
+    - family-names: Song
+      given-names: Yuanmingqing
+    - family-names: Rao
+      given-names: Xiangyun
+    - family-names: Fong
+      given-names: Pangkit
+    - family-names: Zhang
+      given-names: Kunhao
+    - family-names: Fang
+      given-names: Chongrong
+    - family-names: He
+      given-names: Jianping
+  journal: "arXiv preprint arXiv:2609.23943"
+  year: 2026
+  doi: "10.48550/arXiv.2609.23943"
+  url: "https://arxiv.org/abs/2609.23943"

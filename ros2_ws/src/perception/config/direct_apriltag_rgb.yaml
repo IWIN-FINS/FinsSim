@@ -1,0 +1,46 @@
+direct_apriltag_node:
+  ros__parameters:
+    device: /dev/v4l/by-id/usb-DSJ_USB_Camera_200901010001-video-index0
+    width: 1280
+    height: 720
+    fps: 30.0
+    fourcc: MJPG
+
+    family: tag25h9
+    # target_tag_id: -1
+    target_tag_ids: [15,16] # 正式run的时候务必开启！这样才算检测到了！ 请不要修改这个字段！！！！！！！！！！！！实际使用就是这两个tag！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+    max_hamming: 0
+    nthreads: 10
+    quad_decimate: 1.5
+    quad_sigma: 0.0
+    refine_edges: true
+    decode_sharpening: 0.25
+
+    homography_file: calibration/pool_homography.yaml
+    camera_calibration_file: calibration/rgb_camera.yaml
+    # marker_length_m 黑色边框之间的距离（单位 m ）
+    # marker_length_m: 0.098 # 原先的
+    marker_length_m: 0.093 # 新打印的
+    publish_pnp_pose: true
+    pnp_pose_topic: /finsrov/vision/pose_3d_camera
+    pnp_array_topic: /finsrov/vision/tag_poses_3d_camera
+    detection2d_topic: /finsrov/vision/tag_detections_2d
+    pnp_frame_id: finsrov_overhead_camera
+    pnp_covariance_xyz: 0.0025
+
+    status_topic: /finsrov/vision/status
+    camera_status_topic: /finsrov/camera/status
+    debug_image_topic: /finsrov/camera/debug/compressed
+
+    # AprilTag dataset collection. The collector GUI may change dataset_root
+    # for the current node lifetime through the standard ROS2 parameter API.
+    dataset_root: artifacts/datasets/apriltag_pnp_truth
+    dataset_capture_request_topic: /finsrov/dataset/capture_request
+    dataset_capture_result_topic: /finsrov/dataset/capture_result
+    dataset_truth_frame_id: pool_world
+
+    debug_image_enabled: true
+    debug_image_rate_hz: 10.0
+    debug_image_width: 1280
+    debug_jpeg_quality: 95
+    status_rate_hz: 5.0

@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "finssim-marl"
+version = "0.0.1"
+authors = [
+  { name="Yu Zhang", email="sherlock_nolan@sjtu.edu.cn" },
+]
+description = "Multi-agent RL backend for the FinsSim underwater simulation platform."
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "tensorboard==2.20.0",
+    "wandb==0.21.1",
+    "gymnasium",
+    "torch==2.9.0",
+    "tyro==0.9.35",
+    "numpy==2.3.4",
+    "jax===0.7.1",
+    "flax==0.12.0",
+    "optax==0.2.6",
+    "chex==0.1.91",
+    "pettingzoo==1.25.0",
+    "lbforaging==2.0.0",
+    "smaclite @ git+https://github.com/uoe-agents/smaclite",
+    "ray[rllib,tune]>=2.54.0",
+    "mlagents>=0.21.1",
+    "stable-baselines3[extra]>=2.7.1",
+    "tree>=0.2.4",
+    "dm-tree>=0.1.9",
+    "debugpy>=1.8.20",
+    "tqdm>=4.67.3",
+    "benchmarl==1.5.2",
+    "torchrl==0.11.1",
+    "tensordict==0.11.0",
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICENSE*"]
+
+[project.scripts]
+finssim-marl = "finssim_marl.cli:main"
+
+[project.urls]
+Homepage = "https://cleanmarl-docs.readthedocs.io/en/latest/"
+
+[project.optional-dependencies]
+marllib = [
+    "marllib",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["finssim_marl*"]
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
+marllib = { path = "third_party/MARLlib", editable = true }
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[tool.uv]
+override-dependencies = [
+    "markupsafe==2.1.5",
+    "grpcio>=1.60.0",
+    "onnx==1.16.2",
+    "numpy==2.3.4",
+    "mlagents==1.1.0",
+    "pettingzoo==1.25.0",
+    "gymnasium>=1.2.2",
+]

@@ -1,0 +1,19 @@
+base_config: trinet_capture_position_control
+
+experiment:
+  name: trinet_capture_physical_wrench_deepsets
+  seed: 42
+  tags:
+    - trinet-capture
+    - passive-target
+    - physical-wrench-allocator
+
+unity:
+  env_base_port: 4300
+  parallel_mode: multi_area
+
+trainer:
+  backend: marl
+  overrides:
+    critic_variant: trinet_deepsets
+    overwrite: true

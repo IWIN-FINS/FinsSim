@@ -1,0 +1,64 @@
+base_config: traditional_chase_thruster_1chase1
+
+experiment:
+  name: 1chase1_baseline_thruster_eval
+  seed: 42
+  tags:
+    - rl
+    - single_agent
+    - 1chase1
+    - baseline
+    - direct_thruster
+  output_dir: artifacts/evals/rl/1chase1/baseline/thruster
+
+reward:
+    protocol: one_chase_one_reward_v1
+    mode: dense_chase
+    parameters:
+      distance_progress_scale: 0.9
+      distance_scale: 0.08
+      distance_range: 8.0
+      heading_alignment_scale: 0.01
+      approach_velocity_scale: 0.08
+      angular_velocity_penalty_scale: 0.001
+      action_energy_penalty_scale: 0.0005
+      action_delta_penalty_scale: 0.0005
+      near_capture_distance: 1.2
+      near_capture_bonus_scale: 0.03
+      success_reward: 50.0
+      timeout_penalty: -5.0
+      out_of_bounds_penalty: -1.0
+      capture_distance: 0.8
+      stable_capture_relative_speed: 0.35
+      stable_capture_steps_required: 5
+
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/FinsROV/1Chase1_visual/1Chase1.x86_64
+    env_base_port: 16220
+    port_offset: 0
+    no_graphics: false
+    timeout_wait: 600
+    environment_parameters:
+      finsim_1chase1_observation_mode: 14
+    unity_additional_args:
+      - -fins-1chase1-mode
+      - direct14
+    parallel_mode: multi_area
+
+  train:
+    num_envs: 1
+    time_scale: 1.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    num_episodes: 10
+    control_debug_interval: 100
+    window_width: 1280
+    window_height: 720

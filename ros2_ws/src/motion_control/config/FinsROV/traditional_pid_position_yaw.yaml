@@ -1,0 +1,88 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    backend_name: traditional_pid_position
+    checkpoint_path: ""
+    # backend_name and checkpoint_path belong to this controller profile.
+    # Select a different YAML profile instead of overriding either parameter.
+    device: auto
+    control_rate_hz: 60.0
+    position_tolerance: 0.05
+    orientation_tolerance_deg: 5.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    require_target_orientation: true
+    stop_on_goal_reached: false
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    # ROS FLU/ENU -> controller xyz remap.
+    # controller.x = ros.x
+    # controller.y = ros.z
+    # controller.z = ros.y
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    # Controller positions are already Unity/controller coordinates.
+    # Real-vehicle pool/depth offsets must be handled before this node.
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    thruster_output_mode: force_n
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    # V4 Pro1 hardware_bridge expects force_N and converts force -> RPM.
+    # These limits are derived from the V4 Pro1 command-limited thruster
+    # curve used by finsrov_hardware_bridge_v4_pro1.yaml:
+    #   data source: ros2_ws/data/thruster_curve/finsrov_v4_pro1
+    #   force_N = c1 * (rpm_min_or_max * 2*pi / 60)^2
+    # Do not apply another 0.4 factor here. The MCU/bridge command range
+    # [-1, 1] already maps to the safe limited RPM range represented by
+    # rpm_min/rpm_max in the fitted curve.
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+    odom_topic: ""
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    # Position control must not keep running on frozen x/y from fusion hold mode.
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]
+
+    # Traditional PID backend tuning for the real V4 Pro1.
+    # control_axis_ranges is a divisor inside the thrust allocator:
+    #   tau_scaled = tau / control_axis_ranges
+    # A smaller value means a stronger response on that axis. The heave axis is
+    # kept stronger than the 10.0 default, but not as aggressive as the old 0.6
+    # value that was only useful while force limits were accidentally too small.
+    traditional_allocator_control_linear_range: 10.0
+    # Control axes are [Fx, Fy, Fz, Mx, My, Mz]. Fy is Unity/controller heave,
+    # My is the controller-frame yaw axis. Keep My stronger than the default 10
+    # so yaw correction is not drowned out by translation.
+    traditional_allocator_control_axis_ranges: [20.0, 10.0, 20.0, 10.0, 5.0, 10.0]
+    traditional_pid_params: [4.0, 0.005, 0.1, 8.0, 0.004, 0.5, 8.0, 0.004, 0.5]
+    #traditional_pid_params: [5.0, 0.1, 0.2, 12.0, 0.05, 0.5, 12.0, 0.05, 0.5]
+    # Yaw error unit is deg, output unit is controller-frame My moment.
+    # Without this override the backend falls back to the model default
+    # [0.001, 0.0, 0.0], which is far too weak for the real vehicle.
+    traditional_yaw_pid_params: [0.0006, 0.0000, 0.000]
+    traditional_yaw_output_limit: 0.10
+    traditional_allocator_allocation_mode: empirical_thruster_mixer

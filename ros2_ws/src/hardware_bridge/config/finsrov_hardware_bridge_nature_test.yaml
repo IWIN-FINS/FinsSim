@@ -1,0 +1,52 @@
+hardware_bridge:
+  ros__parameters:
+    transport: udp
+    serial_port: /dev/ttyUSB0
+    baudrate: 115200
+    host: 192.168.1.10
+    port: 9000
+    udp_bind_host: 0.0.0.0
+    udp_bind_port: 54321
+    udp_remote_host: 192.168.0.2
+    udp_remote_port: 58766
+    timeout_sec: 0.2
+    reconnect_interval_sec: 1.0
+
+    input_thruster_topic: /finsrov/thrusters_out
+    imu_raw_topic: /finsrov/hardware/imu_raw
+    depth_raw_topic: /finsrov/hardware/depth_raw
+    status_topic: /finsrov/hardware/status
+    thruster_echo_topic: /finsrov/hardware/thruster_cmd_echo
+    motor_rpm_raw_topic: /finsrov/hardware/motor_rpm_raw
+    hardware_telemetry_topic: /finsrov/hardware/telemetry
+    frame_id: finsrov_base_link
+    depth_frame_id: finsrov_depth_link
+    # MCU sensor frame is right-handed x-back, y-right, z-up.
+    imu_sensor_to_base_quaternion_xyzw: [0.0, 0.0, 1.0, 0.0]
+
+    command_mode: normalized_rpm
+    firmware_max_rpm: 3000.0
+
+    clamp: true
+    output_scale: 1.0
+    enabled: false
+    send_zero_on_start: true
+    timeout_enabled: false
+    # Therefore each MCU output index reads from the listed input index.
+    motor_order: [0, 1, 2, 3, 4, 5, 6, 7]
+    # Field-tested output signs in MCU output order.
+    motor_signs: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+    safety_timeout_sec: 0.5
+    telemetry_rate_timeout_sec: 0.5
+    read_rate_hz: 200.0
+    send_rate_limit_hz: 0.0
+    status_rate_hz: 1.0
+    log_every_n: 100
+
+    # Debug mask bits:
+    #   bit0 / 0x00000001: MCU thruster command echo
+    debug_mask: 0
+    debug_echo_decimation: 1
+    debug_config_send_on_start: true
+    debug_config_retry_period_sec: 0.1

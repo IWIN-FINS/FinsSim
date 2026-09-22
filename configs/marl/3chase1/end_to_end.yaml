@@ -1,0 +1,26 @@
+base_config: chasing_3_chase_1_end_to_end
+
+experiment:
+  name: chasing_end_to_end
+  seed: 42
+  tags: []
+
+env:
+  unity:
+    env_base_port: 3000
+    parallel_mode: multi_area
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 10.0
+    mode: asynchronous
+    num_episodes: 10
+
+trainer:
+  backend: marl
+  overrides:
+    overwrite: true
+  
+    

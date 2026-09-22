@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+from perception.calibration_tools.record_stereo_udp_video import main
+
+if __name__ == "__main__":
+    main()

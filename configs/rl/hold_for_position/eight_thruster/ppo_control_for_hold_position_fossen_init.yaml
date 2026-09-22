@@ -1,0 +1,40 @@
+base_config: ppo_control_for_pose
+
+# Isaac-style HoldForPosition warm-start from the corresponding Fossen init
+# eight-thruster policy. HoldForPosition retains the compatible 16D/8D API.
+experiment:
+  name: ppo_control_for_hold_position_fossen_init_10Hz
+  seed: 42
+  tags:
+    - ppo
+    - hold_for_position
+    - eight_thruster
+    - rot6d
+    - observation16
+    - fossen6dof
+    - warm_start
+  output_dir: artifacts/runs/rl/hold_for_position/eight_thruster/ppo_control_for_hold_position_fossen_init
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_10Hz_Server/ControlForPosition.x86_64
+    env_base_port: 31105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 300
+    parallel_mode: multi_binary
+
+  train:
+    num_envs: 32
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 10.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    init_checkpoint: ./artifacts/runs/rl/fossen/ppo_control_for_pose_fossen_init/checkpoints/best_model.zip
+    # Additional steps beyond the loaded checkpoint's timestep counter.
+    total_timesteps: 5000000

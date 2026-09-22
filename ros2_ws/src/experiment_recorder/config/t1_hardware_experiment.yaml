@@ -1,0 +1,504 @@
+schema_version: 1
+experiment_id: T1-HW-PID-PPO
+status: pre_registered
+description: >-
+  Single source of truth for the T1 FinsROV experiments (E4 response, E5
+  simulation, E6 hardware PID, and E7 hardware PPO). This file is also the
+  input to the automatic real-vehicle experiment runner; its target sequence,
+  timing, controller profiles, logging, and safety policy are resolved here.
+
+# This file is the common experiment protocol passed to the runner. Each CLI
+# invocation must additionally select exactly one motion-controller YAML with
+# --controller-config. The runner generates run/test IDs, session IDs, and
+# per-trial manifests automatically.
+# Do not edit it after the first formal trial; create a new version instead.
+
+runner:
+  test_id: auto
+  mode: hardware_t1
+  require_explicit_arm_flag: true
+  dry_run_without_arm: true
+  # Filesystem-safe per-trial identifiers. Full controller YAML paths and
+  # SHA-256 values remain in every manifest; do not put a long profile stem
+  # directly into session directory names.
+  session_strategy_slugs:
+    ppo_isaaclab_finsrov_hold_for_position_reprojected_physical_wrench: ppo_isaac_reproj
+  auto_launch:
+    enabled: true
+    # The lab workflow starts hardware_bridge, refractive_apriltag, and
+    # state_fusion before this runner. The runner only verifies their topics,
+    # then launches the selected motion controller and recorder.
+    start_support_stack: false
+    startup_timeout_sec: 30.0
+    # The runner separately verifies the live controller heartbeat, so retain
+    # only a short scheduling cushion before that check.
+    startup_settle_sec: 0.2
+    terminate_timeout_sec: 10.0
+    # The fixed support stack must be ready before a controller is launched.
+    # The controller-state adapter topics are checked again per trial after
+    # the selected PID/PPO process starts.
+    required_support_topics:
+      - /finsrov/pose
+      - /finsrov/imu_link
+      - /finsrov/depth_link
+      - /finsrov/dvl_link
+      - /finsrov/state/status
+    required_controller_topics:
+      - /finsrov/controller/pose
+      - /finsrov/controller/imu
+      - /finsrov/controller/depth
+      - /finsrov/controller/dvl
+      - /finsrov/controller/state/status
+    hardware_bridge:
+      package: hardware_bridge
+      launch_file: hardware_bridge.launch.py
+      params_file: ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+      enabled_without_arm: false
+      enabled_with_arm: true
+    perception:
+      package: perception
+      launch_file: refractive_apriltag.launch.py
+      detector_params: ros2_ws/src/perception/config/direct_apriltag_rgb.yaml
+      refractive_params: ros2_ws/src/perception/config/refractive_apriltag_rgb.yaml
+    state_fusion:
+      package: state_estimation
+      launch_file: state_fusion.launch.py
+      params_file: ros2_ws/src/state_estimation/config/state_fusion.yaml
+    motion_controller:
+      package: motion_control
+      launch_file: motion_controller.launch.py
+      state_input_mode: raw_fusion
+      pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+  runtime_status:
+    # During every formal T1 hold, print the controller-world x/y(depth)/z/yaw
+    # position, hold progress, and a conservative state-health summary. A WARN
+    # is emitted on a transition into an abnormal condition; the rosbag and
+    # offline completion audit remain the source of record.
+    log_interval_sec: 1.0
+    pose_stale_after_sec: 0.50
+    allowed_vision_modes: [fresh, coast]
+  logging:
+    root: ros2_ws/data/experiments
+    recorder_profile: t1
+    event_topic: /finsrov/experiment/event
+    session_output_layout: <run_id>/trials/<session_id>
+  safety:
+    deadman_required: true
+    emergency_stop_required: true
+    bridge_timeout_sec: 0.5
+    # Ctrl-C / an exception uses this immediate shutdown path. It cancels the
+    # goal, sends zero force_N frames, disables the bridge through its
+    # parameter service, waits for a post-stop MCU diagnostic status (command
+    # received, direct-thruster disabled, and zero RPM/throttle targets), then force-kills
+    # the controller, adapter and recorder process groups. A successful full
+    # run sends the same zero frames but preserves the bridge enabled state.
+    emergency_stop:
+      bridge_node: /hardware_bridge
+      bridge_status_topic: /finsrov/hardware/status
+      zero_frames: 6
+      zero_frame_interval_sec: 0.05
+      parameter_timeout_sec: 1.0
+      confirmation_timeout_sec: 2.0
+    # Normal completion preserves enabled=true after zero commands. Interrupts
+    # and exceptions still use the emergency stop above and disable the bridge.
+    disarm_on_exit: false
+
+coordinate_contract:
+  state_frame: controller_world
+  axes:
+    x: surge_position_m
+    y: depth_position_m_up_positive
+    z: sway_position_m
+    yaw: yaw_deg_about_controller_y
+  error_definition:
+    x: state.controller_world.x - target.controller_world.x
+    depth: state.controller_world.y - target.controller_world.y
+    z: state.controller_world.z - target.controller_world.z
+    yaw: wrap_to_minus180_180_deg(state.yaw_deg - target.yaw_deg)
+  active_dofs: [x, y_depth, z, yaw]
+  uncontrolled_dofs: [roll, pitch]
+
+subexperiments:
+  E4_response:
+    recorder_profile: t1
+    environment: static_water
+    axes:
+      - {name: surge, wrench: Fx, velocity: u}
+      - {name: sway, wrench: Fz, velocity: v}
+      - {name: depth_heave, wrench: Fy, velocity: controller_vy}
+      - {name: yaw, wrench: My, velocity: controller_yaw_rate}
+    signs: [positive, negative]
+    levels_per_sign: 3
+    repeats_per_level: 3
+    pulse_timing_sec:
+      zero_before: 3.0
+      command: 12.0
+      zero_after: 5.0
+    output_dir: ros2_ws/data/artifacts/paper/E4_T1_response
+  E5_simulation:
+    recorder_profile: t1_sim
+    controllers: [PID, PPO_Nominal, PPO_DR]
+    ppo_training_seeds: [101, 202, 303]
+    test_strata: [Standard, Disturbance, OOD]
+    episodes_per_seed_and_stratum: 100
+    episode_duration_sec: 30.0
+    action_mask: {surge: true, sway: true, heave: true, roll: false, pitch: false, yaw: true}
+    output_dir: ros2_ws/data/artifacts/paper/E5_T1_sim
+  E6_hardware_pid:
+    recorder_profile: t1
+    controller: PID
+    protocol: trial_protocol
+    output_dir: ros2_ws/data/artifacts/paper/E6_T1_hardware_pid
+  E7_hardware_ppo:
+    recorder_profile: t1
+    controller: PPO
+    protocol: trial_protocol
+    output_dir: ros2_ws/data/artifacts/paper/E7_T1_hardware_ppo
+
+# Coordinates are expressed in controller_world: y=0 is the water surface and
+# negative y is underwater. The eight points below are broad-coverage candidate
+# corners (two depths x four horizontal corners), not an assertion about the
+# unmeasured pool dimensions. The operator must verify vehicle clearance and
+# camera visibility at every point before arming. If a target must be moved,
+# change the protocol version and repeat the pilot/freeze procedure.
+target_points:
+  coordinate_frame: controller_world
+  water_surface_y_m: 0.0
+  requires_survey_signoff: true
+  target_margin_m: 0.20
+  points:
+    P01_front_left_shallow:
+      x_m: 1.00
+      y_depth_m: -0.50
+      z_m: 0.30
+      yaw_deg: 0.0
+      label: front_left_shallow
+    P02_front_right_shallow:
+      x_m: 1.00
+      y_depth_m: -0.50
+      z_m: -0.30
+      yaw_deg: -90.0
+      label: front_right_shallow
+    P03_rear_right_shallow:
+      x_m: -1.00
+      y_depth_m: -0.50
+      z_m: -0.30
+      yaw_deg: 90.0
+      label: rear_right_shallow
+    P04_rear_left_shallow:
+      x_m: -1.00
+      y_depth_m: -0.50
+      z_m: 0.30
+      yaw_deg: 180.0
+      label: rear_left_shallow
+    P05_front_left_deep:
+      x_m: 1.00
+      y_depth_m: -0.8
+      z_m: 0.30
+      yaw_deg: 0.0
+      label: front_left_deep
+    P06_front_right_deep:
+      x_m: 1.00
+      y_depth_m: -0.8
+      z_m: -0.30
+      yaw_deg: 0.0
+      label: front_right_deep
+    P07_rear_right_deep:
+      x_m: -1.00
+      y_depth_m: -0.8
+      z_m: -0.30
+      yaw_deg: 90.0
+      label: rear_right_deep
+    P08_rear_left_deep:
+      x_m: -1.00
+      y_depth_m: -0.8
+      z_m: 0.30
+      yaw_deg: 180.0
+      label: rear_left_deep
+
+initial_condition:
+  # The autonomous return controller establishes this common underwater pose
+  # before every formal target acquisition. In this controller frame y=0 is
+  # the surface and y<0 is underwater.
+  reference_pose_controller_world: [0.0, -0.5, 0.0, 0.0]
+  max_initial_error_axes: [x, y_depth, z]
+  max_initial_error_m: [0.1, 0.1, 0.1]
+  max_initial_yaw_error_deg: 10.0
+  settle_before_goal_sec: 5.0
+
+autoreset:
+  enabled: true
+  controller: AUTO_RESET_PPO
+  # AUTO_RESET_PPO is a dedicated utility controller. It always uses its
+  # fixed checkpoint below; the formal target controller is selected only by
+  # the command-line --controller-config YAML.
+  # The dedicated return controller applies the same tolerance continuously
+  # for 5 s. Formal target controllers retain their own 10 s hold setting.
+  # The runner additionally verifies a fresh false->true reached transition
+  # and controller-world pose/yaw agreement. Optional health and attitude
+  # gates are configured below.
+  target_controller_world: [0.0, -0.5, 0.0, 0.0]
+  timeout_sec: 90.0
+  position_tolerance_m: 0.10
+  yaw_tolerance_deg: 10.0
+  # Disable the inclination-stop gate during autonomous return. The timeout
+  # and validated position/yaw success gates remain active.
+  tilt_guard_enabled: false
+  # Do not abort or withhold a reset success solely because vision enters its
+  # hold mode.  The controller's reached signal plus pose/yaw tolerances still
+  # determine whether the next target acquisition may start.
+  enforce_state_health: false
+  # Y-up body inclination.  This is deliberately yaw-invariant: an Euler
+  # roll/pitch decomposition can report a false 180 deg pitch at large yaw.
+  tilt_limit_deg: 20.0
+  # A single vision/IMU sample beyond the limit is diagnostic only; continuous
+  # violation is a safety failure.
+  tilt_max_continuous_violation_sec: 1.0
+  start_before_every_trial: true
+  cancel_settle_sec: 0.1
+
+controllers:
+  AUTO_RESET_PPO:
+    # A utility controller only. It establishes the common initial state and
+    # is never the controller whose target-hold window is evaluated.
+    storage_subdirectory: PPO_WRENCH6
+    experiment_label: autonomous_return_to_start_ppo
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_wrench_for_t1_autoreset_physical_wrench_allocator.yaml
+    control_rate_hz: 10.0
+    policy_action_interface: normalized_wrench6_to_bounded_allocator
+    policy_order: [surge, sway, heave, roll, pitch, yaw]
+    active_policy_axes: [surge, sway, heave, yaw]
+    disabled_policy_axes: [roll, pitch]
+    disabled_axis_values: [0.0, 0.0]
+    checkpoint_required: true
+    checkpoint_path: ./artifacts/runs/rl/hold_for_position/physical_wrench_allocator/ppo_wrench_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_dr_maxforce_mode1/checkpoints/best_model.zip
+    safety_gate_required_before_formal_trials: true
+
+  PID:
+    storage_subdirectory: PID
+    experiment_label: frozen_traditional_pid
+    config_file: ros2_ws/src/motion_control/config/FinsROV/traditional_pid_position_yaw.yaml
+    control_rate_hz: 60.0
+    policy_action_interface: closed_loop_pid_to_bounded_allocator
+    checkpoint_required: false
+  PPO:
+    storage_subdirectory: PPO_WRENCH6
+    experiment_label: frozen_ppo_wrench6
+    # Standalone learned controller: all enabled policy axes reach the common
+    # eight-thruster bounded allocator.  This remains the baseline PPO method.
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator_ablation.yaml
+    control_rate_hz: 10.0
+    policy_action_interface: normalized_wrench6_to_bounded_allocator
+    policy_order: [surge, sway, heave, roll, pitch, yaw]
+    active_policy_axes: [surge, sway, heave, yaw]
+    disabled_policy_axes: [roll, pitch]
+    disabled_axis_values: [0.0, 0.0]
+    physical_wrench_active_order: [Fx, Fy, Fz, My]
+    physical_wrench_disabled_components: [Mx, Mz]
+    checkpoint_required: true
+    checkpoint_selection: sealed_simulation_validation_median_of_three_seeds
+    checkpoint_path: null
+    safety_gate_required_before_formal_trials: true
+
+  PPO_HYBRID:
+    storage_subdirectory: PPO_WRENCH6
+    experiment_label: frozen_hybrid_horizontal_ppo_depth_pid
+    config_file: ros2_ws/src/motion_control/config/FinsROV/hybrid_horizontal_ppo_depth_pid.yaml
+    # The common launch file starts controller_state_adapter and this selected
+    # executable.  The profile YAML key must equal controller_node_name.
+    controller_executable: hybrid_horizontal_ppo_depth_pid_controller
+    controller_node_name: hybrid_horizontal_ppo_depth_pid_controller
+    control_rate_hz: 50.0
+    policy_action_interface: horizontal_normalized_wrench6_plus_depth_pid_to_shared_bounded_allocator
+    policy_order: [surge, sway, heave, roll, pitch, yaw]
+    active_policy_axes: [surge, sway, yaw]
+    pid_controlled_axes: [heave]
+    disabled_policy_axes: [heave, roll, pitch]
+    disabled_axis_values: [0.0, 0.0, 0.0]
+    physical_wrench_active_order: [Fx, Fy_pid, Fz, My]
+    physical_wrench_disabled_components: [Mx, Mz]
+    checkpoint_required: true
+    checkpoint_selection: sealed_simulation_validation_median_of_three_seeds
+    checkpoint_path: ros2_ws/../artifacts/runs/rl/hold_for_position/physical_wrench_allocator/ppo_wrench_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_nodr_maxforce_mode1/checkpoints/best_model.zip
+    safety_gate_required_before_formal_trials: true
+
+  # This is an operational PID/PPO comparison, not a control-rate ablation.
+  # The hybrid node's vertical PID is intentionally faster than PPO inference;
+  # all three rates are registered with every session.
+control_rate_comparison:
+  mode: frozen_source_profiles
+  pid_hz: 60.0
+  ppo_hz: 10.0
+  ppo_controller_hz: 50.0
+  ppo_policy_hz: 10.0
+  rate_isolated_claim_allowed: false
+
+shared_runtime:
+  state_adapter: controller_state_adapter
+  controller_frame_id: controller_world
+  state_topics:
+    pose: /finsrov/controller/pose
+    imu: /finsrov/controller/imu
+    depth: /finsrov/controller/depth
+    dvl: /finsrov/controller/dvl
+    status: /finsrov/controller/state/status
+  control_topics:
+    goal_world: /motion_controller/command/position_controller_world
+    control_mode: /motion_controller/control_mode
+    thrusters_out: /finsrov/thrusters_out
+  debug_topics:
+    observation: /motion_controller/debug/observation
+    action: /motion_controller/debug/action
+    wrench6d: /motion_controller/debug/wrench6d
+    thruster_command: /motion_controller/debug/thruster_command
+    policy_info: /motion_controller/debug/policy_info
+  hardware_topics:
+    telemetry: /finsrov/hardware/telemetry
+    motor_rpm: /finsrov/hardware/motor_rpm_raw
+    command_echo: /finsrov/hardware/thruster_cmd_echo
+    bridge_status: /finsrov/hardware/status
+  canonical_thruster_order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF]
+  allocator: physical_wrench_allocator
+  bridge_config: ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+  state_estimation_config: ros2_ws/src/state_estimation/config/state_fusion.yaml
+  state_extrinsics_config: ros2_ws/src/state_estimation/config/state_fusion_extrinsics.yaml
+  pool_world_config: ros2_ws/src/state_estimation/config/pool_world.yaml
+  thrust_curve_source: ros2_ws/data/thruster_curve/finsrov_v4_pro1
+
+trial_protocol:
+  controllers: [PID, PPO, PPO_HYBRID]
+  # Each CLI invocation selects exactly one controller YAML. PID, standalone
+  # PPO, and PPO_HYBRID are separate methods; pair equal setpoint/repeat
+  # indices only for comparisons explicitly declared before collection.
+  setpoints:
+    - P01_front_left_shallow
+    - P02_front_right_shallow
+    - P03_rear_right_shallow
+    - P04_rear_left_shallow
+    - P05_front_left_deep
+    - P06_front_right_deep
+    - P07_rear_right_deep
+    - P08_rear_left_deep
+  repeats_per_controller_and_setpoint: 3
+  total_trials: 24
+  comparison_total_trials: 48
+  controller_selection_required: true
+  return_to_common_start_between_trials: true
+  readiness_timeout_sec: 15.0
+  # Publish the formal target immediately after controller readiness; there
+  # is intentionally no stationary baseline interval between reset and hold.
+  pre_goal_record_sec: 0.0
+  control_duration_sec: 60.0
+  post_goal_record_sec: 0.0
+  trial_time_budget_sec: 90.0
+  control_command_event: hold_start
+  cancel_event: trial_end
+  required_events:
+    - session_start
+    - trial_start
+    - phase_start
+    - hold_start
+    - phase_end
+    - trial_end
+  failure_events:
+    - safety_abort
+    - operator_abort
+    - state_timeout
+    - workspace_exit
+    - controller_fault
+
+metric_protocol:
+  statistical_unit: trial
+  raw_data_is_retained: true
+  # The primary station-keeping metrics deliberately exclude the commanded
+  # transfer from the common water-surface start to a distant target.  They
+  # are evaluated in this fixed late hold interval for every target/controller.
+  evaluation_window:
+    start_after_event: hold_start
+    start_offset_sec: 40.0
+    duration_sec: 20.0
+    resample_hz: 10.0
+    max_interpolation_gap_sec: 0.25
+    minimum_valid_fraction: 0.90
+  # Retained for transient-only metrics such as settling time.  Its samples
+  # must never be substituted for the primary RMSE/P95 values above.
+  response_window:
+    start_after_event: hold_start
+    duration_sec: 60.0
+  settling_time:
+    definition: >-
+      First time after hold_start at which all four controlled errors remain
+      within tolerance continuously for the required hold interval.
+    required_continuous_sec: 10.0
+    no_settle_value: null
+  errors:
+    position_axes: [x, z]
+    depth_axis: y_depth
+    yaw_axis: yaw
+  reported_metrics:
+    - rmse
+    - p95_absolute_error
+    - steady_state_abs_error_mean
+    - steady_state_signed_error_mean
+    - settling_time_sec
+    - success_rate
+  success_definition:
+    all_controlled_errors_within:
+      x_m: 0.10
+      depth_m: 0.10
+      z_m: 0.10
+      yaw_deg: 10.0
+    continuous_hold_sec: 10.0
+    required_state_fresh_fraction: 0.90
+    forbidden_events: [safety_abort, operator_abort, state_timeout, workspace_exit, controller_fault]
+  auxiliary_diagnostics:
+    - state_fresh_fraction
+    - vision_mode_fraction
+    - allocation_residual_norm
+    - thruster_saturation_fraction
+    - command_effort_proxy
+    - motor_rpm_echo_availability
+    - max_abs_roll_deg
+    - max_abs_pitch_deg
+    - roll_pitch_guard_violation
+  attitude_guard:
+    roll_pitch_limit_deg: 20.0
+    max_continuous_violation_sec: 1.0
+    violation_is_trial_failure: true
+
+recording:
+  recorder_profile: t1
+  output_root: ros2_ws/data/experiments
+  rosbag_storage: sqlite3
+  compression: none
+  required_config_files:
+    - ros2_ws/src/experiment_recorder/config/t1_hardware_experiment.yaml
+    - ros2_ws/src/motion_control/config/FinsROV/traditional_pid_position_yaw.yaml
+    - ros2_ws/src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator.yaml
+    - ros2_ws/src/motion_control/config/FinsROV/ppo_wrench_for_t1_autoreset_physical_wrench_allocator.yaml
+    - ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+    - ros2_ws/src/state_estimation/config/state_fusion.yaml
+    - ros2_ws/src/state_estimation/config/state_fusion_extrinsics.yaml
+    - ros2_ws/src/state_estimation/config/pool_world.yaml
+  ppo_checkpoint_sha256_required: true
+  analysis_output:
+    pid: ros2_ws/data/artifacts/paper/E6_T1_hardware_pid
+    ppo: ros2_ws/data/artifacts/paper/E7_T1_hardware_ppo
+    paired_comparison: ros2_ws/data/artifacts/paper/T1_hardware_pid_ppo
+  required_outputs:
+    - manifest.json
+    - raw/rosbag2/metadata.yaml
+    - derived/trial_metrics.csv
+    - derived/controller_summary.csv
+    - derived/metric_definitions.json
+
+safety:
+  hardware_bridge_enabled_only_after_preflight: true
+  deadman_required: true
+  emergency_stop_required: true
+  state_freshness_timeout_sec: 0.5
+  disarm_on_timeout: true
+  disarm_on_policy_nan_or_inf: true
+  disarm_on_force_limit_violation: true
+  operator_must_verify_target_and_workspace: true
+  no_formal_ppo_trial_without_checkpoint_hash: true

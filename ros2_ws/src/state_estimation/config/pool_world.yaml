@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    # Single runtime source of truth for the real pool vertical origin.
+    # pool_world is z-up, z=0 is the pool bottom, and the water surface is here.
+    water_surface_z_m: 0.96
+    depth_sign: -1.0
+    pressure_sensor_offset_z_body: -0.115

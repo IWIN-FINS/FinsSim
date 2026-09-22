@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+from perception.calibration_tools.evaluate_homography_yaml import main
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,42 @@
+schema_version: 1
+description: >-
+  Read-only AprilTag/Snell/state-fusion runtime stability protocol. The
+  recorder subscribes to production topics only: it never launches the T1
+  runner, changes a ROS parameter, enables/disables the hardware bridge, or
+  publishes a control command.
+
+experiment:
+  experiment_id: E1-APRILTAG-AVAILABILITY
+  output_root: ros2_ws/data/experiments/E1
+  default_free_drift_duration_sec: 60.0
+
+topics:
+  # Direct detector: one status sample per processed camera frame.
+  detector_status: /finsrov/vision/status
+  # Refractive pose status is separate from detector_status.
+  refractive_status: /finsrov/vision/refracted/status
+  fusion_status: /finsrov/state/status
+  snell_pose: /finsrov/vision/refracted_pose_6d
+  pinhole_pose: /finsrov/vision/refracted_pose_6d_pure
+  fused_pose: /finsrov/pose
+  experiment_event: /finsrov/experiment/event
+
+sampling:
+  info_period_sec: 5.0
+
+t1:
+  # Current runner emits trial_start, hold_start, phase_end, trial_end. These
+  # are capture/reporting boundaries. Non-event samples are retained only from
+  # hold_start through phase_end; acquisition/reset intervals are never stored.
+  # All eight event-defined target sessions in one T1 batch are recorded.
+  capture_scope: all_target_sessions
+  hold_windows:
+    transient_end_sec: 40.0
+    late_end_sec: 60.0
+
+t2:
+  # Every repeat has a distinct runner session.  Non-event samples are stored
+  # only from trajectory_start through trajectory_end; the post-trajectory
+  # recorder grace period and the 15 s inter-trial reset interval are excluded.
+  capture_start_event: trajectory_start
+  capture_end_event: trajectory_end

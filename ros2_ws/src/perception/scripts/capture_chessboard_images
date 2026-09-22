@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+from perception.calibration_tools.capture_chessboard_images import main
+
+if __name__ == "__main__":
+    main()

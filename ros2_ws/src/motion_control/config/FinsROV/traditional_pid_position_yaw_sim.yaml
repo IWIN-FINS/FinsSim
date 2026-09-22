@@ -1,0 +1,77 @@
+# Unity/MARUS T1 evaluation profile.  It keeps the deployed PID structure and
+# four controlled axes, but consumes VehicleRosBridge sim-truth topics and
+# publishes only into the isolated /sim namespace.
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    # Must follow Unity/MARUS /clock for accelerated simulation evaluation.
+    use_sim_time: true
+    # Unity waits for this controller's acknowledgement at every physics tick.
+    # The 10x setting is therefore an upper speed bound, never a free-running
+    # clock that can outrun the controller.
+    lockstep_enabled: true
+    lockstep_clock_topic: /clock
+    lockstep_ack_topic: /sim/motion_controller/debug/control_tick_complete
+    backend_name: traditional_pid_position
+    checkpoint_path: ""
+    device: auto
+    control_rate_hz: 60.0
+    position_tolerance: 0.05
+    orientation_tolerance_deg: 5.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    require_target_orientation: true
+    stop_on_goal_reached: false
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /sim/motion_controller/control_mode
+
+    # VehicleRosBridge already publishes the Unity controller frame:
+    # x forward, y up, z left.  This is deliberately not the real-pool map.
+    ros_to_controller_basis_indices: [0, 1, 2]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /sim/finsrov/thrusters_out
+    pwm_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: force_n
+    # The Unity Fossen scenes use a symmetric 7 N direct-thruster envelope.
+    thruster_force_limits_n:
+      positive: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+      negative: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    # sim_truth_state_status publishes this readiness gate; keep it in /sim.
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /sim/motion_controller/command/position_controller_world
+    command_position_body_topic: /sim/motion_controller/command/position_controller_body
+    command_pose_body_topic: /sim/motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /sim/motion_controller/command/velocity_controller_body
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    reset_topic: /sim/finsrov/reset
+    reset_service_name: /sim/motion_controller/reset_vehicle
+    status_active_pose_topic: /sim/motion_controller/status/active_pose
+    status_error_body_topic: /sim/motion_controller/status/error_body
+    status_reached_topic: /sim/motion_controller/status/reached
+    debug_observation_topic: /sim/motion_controller/debug/observation
+    debug_action_topic: /sim/motion_controller/debug/action
+    debug_wrench6d_topic: /sim/motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+    debug_thruster_command_stamped_topic: /sim/motion_controller/debug/thruster_command_stamped
+    debug_policy_info_topic: /sim/motion_controller/debug/policy_info
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]
+    traditional_allocator_control_linear_range: 10.0
+    traditional_allocator_control_axis_ranges: [20.0, 10.0, 20.0, 10.0, 5.0, 10.0]
+    traditional_yaw_pid_params: [0.001, 0.00005, 0.0002]
+    traditional_allocator_allocation_mode: empirical_thruster_mixer

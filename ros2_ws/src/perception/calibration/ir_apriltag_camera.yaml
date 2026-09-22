@@ -1,0 +1,107 @@
+# Infrared camera and robot AprilTag calibration ported from:
+# /write_bot_pose.cpp
+#
+# Source video used by the old C++ code:
+# /test.mp4
+# OpenCV reported resolution: 2560x1440, approximately 30 fps.
+#
+# The ROS Python tracker currently uses these parameters for configuration and
+# status reporting. Full multi-tag PnP should consume camera_matrix,
+# distortion_coefficients, marker_length_m, and tag_transforms_robot.
+
+camera_name: finsrov_overhead_ir_camera
+image_width: 2560
+image_height: 1440
+
+camera_matrix:
+  rows: 3
+  cols: 3
+  data:
+    - 1.133601568364087e+03
+    - -0.744532833265443
+    - 1.372239661307784e+03
+    - 0.0
+    - 1.132798445477066e+03
+    - 6.814712328352829e+02
+    - 0.0
+    - 0.0
+    - 1.0
+
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data:
+    - -0.012542313742548
+    - 0.028249637903642
+    - 0.0
+    - 0.0
+    - -7.7709834004884e-002
+
+marker_length_m: 0.098
+target_tag_ids: [2, 3, 4]
+max_reprojection_error_px: 4.0
+
+# Transforms are tag-local marker frame to robot frame, copied from
+# pose.json / write_bot_pose.cpp as T_RM2, T_RM3, T_RM4.
+tag_transforms_robot:
+  2:
+    rows: 4
+    cols: 4
+    data:
+      - 0.00439775378909002
+      - -0.9992542828418397
+      - -0.03836063059790358
+      - -0.2699503826946403
+      - -0.9999347203314503
+      - -0.0047988254851407675
+      - 0.010369491096879188
+      - 0.08356371343747361
+      - -0.010545844361283963
+      - 0.03831252395998792
+      - -0.9992101559064168
+      - -0.603050718011006
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+  3:
+    rows: 4
+    cols: 4
+    data:
+      - -0.9996147672463251
+      - 0.015407461827975874
+      - -0.023085216375325325
+      - -0.27171507644855664
+      - 0.015361276414041997
+      - 0.99987963942927
+      - 0.0021766583847085716
+      - -0.10082947295675623
+      - 0.023115974606481973
+      - 0.0018212014747938762
+      - -0.9997311313224078
+      - -0.6029885455823316
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+  4:
+    rows: 4
+    cols: 4
+    data:
+      - -0.9995909694913792
+      - -0.002120871794718024
+      - -0.02852009127118243
+      - -0.39875948852167403
+      - -0.002186197541230635
+      - 0.9999950575195898
+      - 0.0022595301951716293
+      - -0.005805618316657419
+      - 0.028515158137329768
+      - 0.002320956531808547
+      - -0.999590665677297
+      - -0.5984722617846315
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0

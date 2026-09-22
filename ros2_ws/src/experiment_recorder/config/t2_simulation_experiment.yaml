@@ -1,0 +1,199 @@
+schema_version: 1
+experiment_id: E9-T2-UNITY-ROS2
+status: ready_for_static_water_simulation
+description: >-
+  Unity/MARUS T2 simulation protocol.  The geometry is read from the frozen
+  T2 trajectory YAML so a selected path has one source of truth across
+  simulation and hardware.  The selected SB3 checkpoint is loaded by ROS2
+  and drives Unity via gRPC without deployment-only action attenuation.
+
+runner:
+  mode: unity_ros2_t2
+  # Unity advances a physics step only after the ROS2 controller has
+  # acknowledged the matching /clock tick.  `time_scale` is a requested upper
+  # bound: the effective wall-clock speed is capped by controller/ROS2
+  # throughput, while every trajectory timestamp remains simulated seconds.
+  # This is experiment-local and never changes training eval_time_scale.
+  simulation_clock:
+    mode: ros2_control_lockstep
+    use_sim_time: true
+    clock_topic: /clock
+    time_scale: 10.0
+    clock_start_timeout_wall_sec: 30.0
+    clock_stall_timeout_wall_sec: 15.0
+    lockstep_ack_topic: /sim/motion_controller/debug/control_tick_complete
+    lockstep_ack_timeout_wall_sec: 15.0
+  auto_launch:
+    enabled: true
+    startup_timeout_sec: 120.0
+    startup_settle_sec: 3.0
+    terminate_timeout_sec: 15.0
+    recorder_finalize_timeout_sec: 90.0
+    grpc_adapter:
+      script: ros2_ws/scripts/launch_grpc_ros_adapter.sh
+      args: ["topic_prefix:=/sim"]
+    reset_service:
+      package: motion_control
+      executable: reset_service
+      reset_topic: /sim/finsrov/reset
+      thruster_topic: /sim/finsrov/thrusters_out
+      cancel_topic: /sim/motion_controller/command/cancel
+      service_name: /sim/motion_controller/reset_vehicle
+    unity_gui:
+      # Must match ProjectSettings/ProjectVersion.txt.  The older 6000.0.62f1
+      # editor cannot resolve this project's package manifest.
+      editor_executable: ${UNITY_EDITOR_PATH}
+      project_path: simulators/unity/marus-example
+      scene_path: ./simulators/unity/marus-example/Assets/Scenes/HoldForPosition_Fossen_Parallel_30s.unity
+      command_file: /tmp/unity_play_command
+      status_file: /tmp/unity_play_status.json
+      prepare_command: prepare_ros_evaluation_scene
+      start_command: play
+      stop_command: stop
+      # Reuse an already-open matching Unity project+scene.  At experiment
+      # completion/Ctrl-C the runner stops Play mode, but never closes Editor.
+      stop_play_mode_on_exit: true
+      # A cold Unity 6000.3 scene open can exceed two minutes.
+      status_timeout_sec: 360.0
+    motion_controller:
+      package: motion_control
+      launch_file: motion_controller.launch.py
+      state_input_mode: sim_truth
+      pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+    required_support_topics:
+      - /sim/finsrov/controller/pose
+      - /sim/finsrov/controller/imu
+      - /sim/finsrov/controller/depth
+      - /sim/finsrov/controller/dvl
+    required_controller_topics:
+      - /sim/finsrov/controller/state/status
+      - /sim/finsrov/controller/state/status_stamped
+      - /sim/motion_controller/debug/trajectory_reference
+      - /sim/motion_controller/debug/trajectory_reference_stamped
+      - /sim/motion_controller/debug/observation
+      - /sim/motion_controller/debug/thruster_command
+  runtime_status:
+    # Simulated seconds.  In lockstep, wall-clock speed depends on the actual
+    # ROS2/controller acknowledgement throughput, not on this nominal ratio.
+    log_interval_sec: 10.0
+    pose_stale_after_sec: 0.50
+  logging:
+    root: ros2_ws/data/experiments
+    recorder_profile: t2_sim
+    event_topic: /finsrov/experiment/event
+    session_output_layout: <run_id>/trials/<session_id>
+
+coordinate_contract:
+  state_frame: controller_world
+  source: unity_vehicle_ros_bridge_sim_truth
+  tracked_dofs: [x, y_depth, z]
+  untracked_state_dofs: [roll, pitch, yaw]
+  # This is an evaluation/metric boundary only.  PPO_WRENCH6 retains all six
+  # policy channels before its training-time physical allocator.
+  policy_action_dofs: [Fx, Fy, Fz, Mx, My, Mz]
+  # x forward, y up/depth, z left; direct Unity controller basis.
+  ros_to_controller_basis_indices: [0, 1, 2]
+  ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+
+environment:
+  hydrodynamics_backend: fossen
+  water_condition: static_water
+  domain_randomization_at_evaluation: false
+
+controllers:
+  PID_POSITION:
+    storage_subdirectory: PID
+    enabled: true
+    label: traditional_pid_position_trajectory_sim
+    # This is the /sim counterpart of traditional_pid_trajectory_tracking.yaml.
+    # It consumes Unity controller-world state directly and keeps yaw disabled,
+    # matching the translation-only T2 task contract.
+    config_file: ros2_ws/src/motion_control/config/FinsROV/traditional_pid_trajectory_tracking_sim.yaml
+    checkpoint_required: false
+    expected_backend_name: traditional_pid_position
+    expected_observation_dim: 20
+    action_interface: position_pid_to_empirical_canonical_thruster8
+    tracking_wrench_components: [Fx, Fy, Fz]
+    untracked_wrench_components: [Mx, My, Mz]
+    control_rate_hz: 50.0
+    unity_sim_thruster_command_mode: force_n
+    # PID has no policy-observation publisher.  Do not inherit the PPO
+    # readiness gate, or a valid PID trial would time out before trajectory_start.
+    required_controller_topics:
+      - /sim/finsrov/controller/state/status
+      - /sim/motion_controller/debug/trajectory_reference
+      - /sim/motion_controller/debug/thruster_command
+
+  PPO_WRENCH6:
+    storage_subdirectory: PPO_WRENCH6
+    enabled: true
+    label: ppo_wrench6_trajectory30_sim
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_trajectory_tracking_wrench6_sim.yaml
+    checkpoint_required: true
+    expected_backend_name: ppo_trajectory_tracking_wrench6
+    expected_observation_dim: 30
+    action_interface: wrench6_to_physical_allocator_to_canonical_thruster8
+    # These are the task's tracking axes, not an action mask.  The checkpoint
+    # still emits and the training-time allocator still receives all six
+    # components below.
+    tracking_wrench_components: [Fx, Fy, Fz]
+    # Roll/pitch/yaw are not trajectory targets, but are intentionally not
+    # disabled in simulation so that the checkpoint keeps its original ABI.
+    untracked_wrench_components: [Mx, My, Mz]
+    control_rate_hz: 10.0
+    unity_sim_thruster_command_mode: force_n
+
+  PPO_THRUSTER8:
+    storage_subdirectory: PPO_THRUSTER8
+    enabled: true
+    label: ppo_thruster8_trajectory30_sim
+    # Keep the same PPO backend/checkpoint ABI as
+    # ppo_trajectory_tracking_thruster8.yaml, but use the /sim topics and
+    # Unity's symmetric force envelope from the simulation counterpart.
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_trajectory_tracking_thruster8_sim.yaml
+    checkpoint_required: true
+    expected_backend_name: ppo_trajectory_tracking_thruster8
+    expected_observation_dim: 30
+    action_interface: canonical_thruster8_direct_force_n
+    canonical_thruster_order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF]
+    control_rate_hz: 10.0
+    unity_sim_thruster_command_mode: force_n
+
+# Do not duplicate geometry here.  The simulation runner copies the resolved
+# reference CSV and its SHA-256 into every run manifest.
+trajectory_source_config: ros2_ws/src/experiment_recorder/config/t2_hardware_experiment.yaml
+
+trial_protocol:
+  exactly_one_trajectory_per_invocation: true
+  repeats_per_controller_and_trajectory: 3
+  # Simulation reset is immediate after each rosbag finalizes.  This differs
+  # only from the hardware's 15 s human/thermal interval and is recorded.
+  inter_trial_interval_sec: 0.0
+  post_trajectory_record_sec: 7.0
+  required_events: [session_start, trial_start, phase_start, trajectory_start, trajectory_end, phase_end, trial_end]
+  failure_events: [operator_abort, state_timeout, controller_fault, unity_process_exit]
+
+metric_protocol:
+  statistical_unit: trial
+  evaluation_window:
+    start_after_event: trajectory_start
+    duration_sec: trajectory_duration
+    resample_hz: 10.0
+    max_interpolation_gap_sec: 0.25
+    minimum_valid_fraction: 0.90
+  cross_track:
+    mode: time_local_monotonic_projection
+    reference_dense_sample_hz: 50.0
+    maximum_reference_time_offset_sec: 2.0
+  report:
+    - cross_track_rmse_m
+    - cross_track_p95_m
+    - time_aligned_position_rmse_m
+    - depth_rmse_m
+    - completion_ratio
+    - action_energy
+    - action_smoothness
+    - thruster_saturation_fraction
+    - allocation_residual
+    - max_abs_roll_deg
+    - max_abs_pitch_deg

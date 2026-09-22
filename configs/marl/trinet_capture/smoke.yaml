@@ -1,0 +1,15 @@
+base_config: trinet_capture_position_control_smoke
+
+experiment:
+  name: trinet_capture_smoke
+  seed: 42
+
+unity:
+  env_base_port: 4300
+  parallel_mode: multi_area
+
+trainer:
+  backend: marl
+  overrides:
+    critic_variant: trinet_deepsets
+    overwrite: true

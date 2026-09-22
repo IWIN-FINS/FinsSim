@@ -1,0 +1,81 @@
+# Unity/MARUS T1 evaluation profile for a direct eight-thruster PPO.
+#
+# This profile deliberately preserves the checkpoint's raw action vector:
+# the eight values predicted by SB3 are clipped only to [-1, 1] and published
+# in canonical order directly to Unity.  It contains no hardware force curve,
+# action-rate limiter, wrench projection, allocator, axis gain, or roll/pitch
+# masking.  The simulation runner selects VehicleRosBridge ForceN mode, which
+# applies these numeric values as direct force requests without a
+# normalized-to-force remapping.
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    # Must follow Unity/MARUS /clock for accelerated simulation evaluation.
+    use_sim_time: true
+    # Unity waits for this controller's acknowledgement at every physics tick;
+    # the direct eight-thruster policy remains a native 10 Hz hold.
+    lockstep_enabled: true
+    lockstep_clock_topic: /clock
+    lockstep_ack_topic: /sim/motion_controller/debug/control_tick_complete
+    backend_name: ppo_control_for_pose
+    # Formal runs supply this through --checkpoint.
+    checkpoint_path: ""
+    device: cuda
+    control_rate_hz: 10.0
+    policy_action_rate_limit_per_sec: 0.0
+    position_tolerance: 0.10
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    require_target_orientation: true
+    # The experiment protocol owns its 60 s acquisition interval.
+    stop_on_goal_reached: false
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /sim/motion_controller/control_mode
+
+    # Unity controller_world is already [x forward, y up, z left].
+    ros_to_controller_basis_indices: [0, 1, 2]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /sim/finsrov/thrusters_out
+    pwm_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: normalized_direct
+
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    # Consumed by sim_truth_state_status as well as motion_controller.  Both
+    # must use the isolated /sim namespace; otherwise the controller's
+    # fusion-ready safety gate intentionally remains closed.
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /sim/motion_controller/command/position_controller_world
+    command_position_body_topic: /sim/motion_controller/command/position_controller_body
+    command_pose_body_topic: /sim/motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /sim/motion_controller/command/velocity_controller_body
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    reset_topic: /sim/finsrov/reset
+    reset_service_name: /sim/motion_controller/reset_vehicle
+    status_active_pose_topic: /sim/motion_controller/status/active_pose
+    status_error_body_topic: /sim/motion_controller/status/error_body
+    status_reached_topic: /sim/motion_controller/status/reached
+    debug_observation_topic: /sim/motion_controller/debug/observation
+    debug_action_topic: /sim/motion_controller/debug/action
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+    debug_thruster_command_stamped_topic: /sim/motion_controller/debug/thruster_command_stamped
+    debug_policy_info_topic: /sim/motion_controller/debug/policy_info
+
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

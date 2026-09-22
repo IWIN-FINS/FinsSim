@@ -1,0 +1,84 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    # FinsROV IsaacLab RSL-RL backend; do not substitute the legacy WarpAUV backend.
+    backend_name: isaaclab_finsrov_hold_for_position
+    # This must be an RSL-RL checkpoint trained with the 16D/8D FinsROV
+    # calibrated-thrust action schema.
+    # checkpoint_path: "${ISAACLAB_PATH}/logs/rsl_rl/finssim_finsrov_hold_for_position_yaw_16d_8d/2026-08-20_22-55-42/model_400.pt"
+    #checkpoint_path: "${ISAACLAB_PATH}/logs/rsl_rl/finssim_finsrov_hold_for_position_yaw_16d_8d/2026-08-21_16-34-28_2026-08-21_16-34-25-9a8ecb11/model_999.pt"
+    checkpoint_path: "${ISAACLAB_PATH}/logs/rsl_rl/finssim_finsrov_hold_for_position_yaw_16d_8d/2026-08-23_19-16-55/model_399.pt"
+    
+
+
+    device: cuda
+    control_rate_hz: 10.0
+    # Keep the hardware safety ramp.  It is applied before output conversion.
+    policy_action_rate_limit_per_sec: 0.75
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+
+    # ROS FLU/ENU -> controller xyz remap: controller = [ros.x, ros.z, ros.y].
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    # action -> calibrated force -> physical body wrench -> scaled wrench ->
+    # bounded 8-thruster allocation.  This is deliberately not the exact
+    # raw PPO action output; it is the constrained physical-wrench profile.
+    thruster_output_mode: thruster8_reprojected_physical_wrench_force_n
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    thruster_output_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    # V4 Pro1 command-limited calibration; the bridge maps [-1, 1] to this
+    # fitted RPM range, so no additional global 0.4/0.5 factor is applied.
+    thruster_force_limits_n:
+      positive: [8.474877, 8.797188, 8.797188, 8.474877, 8.797188, 8.474877, 8.797188, 8.474877]
+      negative: [7.974983, 8.272793, 8.272793, 7.974983, 8.272793, 7.974983, 8.272793, 7.974983]
+
+    thruster8_wrench_projection:
+      input_thruster_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    # B @ force = [Fx, Fy, Fz, Mx, My, Mz], with [forward, up, left,
+    # roll, yaw, pitch].  The scale list is in legacy policy order
+    # [surge, sway, heave, roll, pitch, yaw].  Disable roll/pitch and attenuate
+    # yaw before reallocation for this position-plus-yaw task.
+    wrench6d:
+      allocation_mode: physical_wrench_allocator
+      policy_axis_order: legacy_surge_sway_heave
+      wrench_limits: [19.528527, 18.415027, 22.501886, 3.863995, 3.079985, 7.080833]
+      wrench_scale: [0.5,0.5,0.5,0.0,0.0,0.05]
+
+    odom_topic: ""
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

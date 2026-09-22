@@ -1,0 +1,80 @@
+references_code/
+ros2_ws/runtime/
+BEFORE_RELEASE.md
+# Unity Builds
+artifacts/unity_builds/rl/linux/
+artifacts/datasets/
+unity/
+unity
+simulators/unity/
+simulators/isaaclab/
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local environments
+.venv*/
+.python-version.local
+
+# FinsSim generated outputs
+artifacts/**
+!artifacts/
+!artifacts/README.md
+!artifacts/**/
+!artifacts/**/.gitkeep
+artifacts/evals/
+artifacts/exports/
+runs/
+checkpoints/
+logs/
+models_onnx/
+results/
+
+# ROS2 generated outputs
+build/
+install/
+log/
+
+# Unity generated outputs
+unity/**/Library/
+unity/**/Temp/
+unity/**/Obj/
+unity/**/Logs/
+unity/**/UserSettings/
+unity/**/Build/
+unity/**/Builds/
+
+# Editor and local assistant state
+.idea/
+.vscode/*
+!.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+
+.agents/
+.claude/
+.codex/
+
+# OS
+.DS_Store
+Thumbs.db
+
+ros2_ws/data/
+
+# Non-release historical material and experiment ablations
+**/archive/
+**/_archive/
+**/arhive/
+configs/marl/trinet_capture/train/physical_wrench_attention.yaml
+configs/marl/trinet_capture/train/physical_wrench_flat_mlp.yaml
+configs/**/ablation*/
+configs/**/*ablation*.yaml
+ros2_ws/tmp/
+ros2_ws/src/finsrov_experiment_recorder/config/paper_*.yaml
+python/finssim_marl/docs/temp_command_line.md
+AGENTS-PRIVATE.md

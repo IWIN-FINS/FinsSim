@@ -1,0 +1,61 @@
+state_fusion:
+  ros__parameters:
+    vision_pnp_topic: /finsrov/vision/tag_poses_3d_camera
+    vision_6d_topic: /finsrov/vision/refracted_pose_6d
+    use_vision_pnp: false
+    use_vision_6d: true
+    use_vision_6d_z: false
+    imu_raw_topic: /finsrov/hardware/imu_raw
+    depth_raw_topic: /finsrov/hardware/depth_raw
+    extrinsics_file: config/state_fusion_extrinsics.yaml
+
+    pose_topic: /finsrov/pose
+    imu_topic: /finsrov/imu_link
+    depth_topic: /finsrov/depth_link
+    dvl_topic: /finsrov/dvl_link
+    status_topic: /finsrov/state/status
+
+    world_frame_id: pool_world
+    body_frame_id: finsrov_base_link
+    depth_frame_id: finsrov_depth_link
+    publish_rate_hz: 60.0
+
+    vision_timeout_sec: 0.25
+    imu_timeout_sec: 0.10
+    depth_timeout_sec: 0.30
+    velocity_filter_alpha: 0.35
+    stale_velocity_decay: 0.95
+    publish_pose_before_ready: false
+    vision_coast_timeout_sec: 0.75
+    # After coast, freeze x/y and let the controller hold the last thruster
+    # command briefly. Past this total vision age, report vision_mode=lost so
+    # the controller/hardware path can zero the thrusters.
+    vision_hold_timeout_sec: 3.0
+    vision_hold_velocity_decay: 0.50
+    max_position_covariance_xy: 4.0
+    max_velocity_covariance_xy: 1.0
+    # pool_world vertical constants are injected by launch from:
+    # state_estimation/config/pool_world.yaml
+    # /finsrov/hardware/depth_raw reports pressure-sensor depth from the water surface.
+
+    pose_covariance_xy: 0.0025
+    pose_covariance_depth: 0.0025
+    dvl_covariance: 0.01
+
+    use_vision_yaw: true
+    # IMU yaw is not used as an absolute world-yaw measurement by default.
+    # The onboard IMU yaw has an arbitrary/global offset unless calibrated to
+    # pool_world, while AprilTag vision yaw is already in pool_world.
+    use_imu_yaw_measurement: false
+    use_vision_z: false
+    vision_yaw_covariance: 0.05
+    imu_yaw_covariance: 0.02
+    depth_covariance: 0.0025
+    vision_position_covariance_xy: 0.0025
+    vision_position_covariance_z: 0.05
+    ekf_process_noise_position: 0.02
+    ekf_process_noise_velocity: 0.10
+    ekf_yaw_process_noise: 0.02
+    measurement_gate_mahalanobis: 9.0
+    max_reprojection_error_px: 4.0
+    multi_tag_conflict_distance_m: 0.25

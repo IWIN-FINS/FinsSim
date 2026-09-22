@@ -1,0 +1,8 @@
+unity:
+  env_path: artifacts/unity_builds/marl/linux/FinsROV/3Chase1_headless/3Chase1.x86_64
+  num_envs: 1
+  env_base_port: 5005
+  port_offset: 0
+  time_scale: 10.0
+  no_graphics: true
+  seed: 42

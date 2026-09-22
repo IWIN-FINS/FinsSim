@@ -1,0 +1,103 @@
+# Default integrated thrust curve measurement profile.
+#
+# Per-run values usually still supplied on the command line:
+#   --index
+#   --sensor-port
+#   --output-dir
+#   --motor-name
+thruster_curve_measure:
+  topic: /finsrov/thrusters_out
+  mode: step
+
+  # Non-uniform normalized command points in [-1, 1].
+  # The low-speed/dead-zone-like region near 0 is sampled densely,
+  # while high-command regions are sampled more sparsely.
+  amplitude: 1.0
+  step: 0.1
+  step_commands:
+    - -1.0
+    - -0.9
+    - -0.8
+    - -0.7
+    - -0.6
+    - -0.5
+    - -0.4
+    - -0.35
+    - -0.3
+    - -0.25
+    - -0.2
+    - -0.15
+    - -0.1
+    - -0.08
+    - -0.06
+    - -0.04
+    - -0.02
+    - 0.0
+    - 0.02
+    - 0.04
+    - 0.06
+    - 0.08
+    - 0.1
+    - 0.15
+    - 0.2
+    - 0.25
+    - 0.3
+    - 0.35
+    - 0.4
+    - 0.45
+    - 0.5
+    - 0.6
+    - 0.7
+    - 0.8
+    - 0.9
+    - 1.0
+
+  # Step timing. Only the final step_sample seconds of each hold are summarized.
+  step_hold: 5.0
+  step_sample: 2.0
+  step_rest: 1.0
+  repeat_count: 1
+  # Used only when repeat_count > 1. Gives the tank time to settle between full passes.
+  repeat_rest: 90.0
+
+  # Common timing and logging.
+  rate: 10.0
+  pre_zero: 5.0
+  settle: 3.0
+  post_zero: 5.0
+  zero_samples: 30
+  no_fit: false
+  fit_min_abs_command: 0.0
+  rpm_fit_min_abs_rpm: 0.0
+  force_topic: /finsrov/thruster_curve/force_zeroed_n
+  force_log_period: 1.0
+  rpm_topic: /finsrov/hardware/motor_rpm_raw
+  rpm_stale_sec: 0.5
+
+  # Ramp/loop/rpm-sweep compatibility.
+  # mode: loop and mode: rpm-sweep use amplitude and ramp, force bidirectional=true,
+  # and ignore hold_start/hold_end. In rpm-sweep, rpm_fit.csv is fitted from raw samples
+  # instead of step summary points; use a slow ramp to avoid violent command changes.
+  marker_amplitude: 0.0
+  marker_on: 0.5
+  marker_off: 0.5
+  marker_count: 0
+  hold_start: 2.0
+  ramp: 60.0
+  hold_end: 2.0
+  bidirectional: false
+
+  # Force sensor Modbus defaults.
+  sensor_baudrate: 115200
+  sensor_bytesize: 8
+  sensor_parity: N
+  sensor_stopbits: 1
+  sensor_timeout: 0.2
+  sensor_address: 205
+  sensor_count: 1
+  sensor_device_id: 1
+  sensor_divisor: 100.0
+  sensor_scale: 0.98
+  sensor_offset_n: 0.0
+
+  no_stop_on_exit: false

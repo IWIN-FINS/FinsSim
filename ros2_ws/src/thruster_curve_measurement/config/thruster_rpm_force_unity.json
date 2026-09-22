@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "generated_date": "2026-07-16",
+  "purpose": "Unity thruster RPM-to-force parameters identified from FinsROV rpm-sweep measurements.",
+  "units": {
+    "omega": "rad/s",
+    "rpm": "rev/min",
+    "force": "N",
+    "c1": "N/(rad/s)^2"
+  },
+  "model": {
+    "name": "signed_piecewise_static_bollard_model",
+    "rpm_to_omega_rad_s": "omega = rpm * 2*pi/60",
+    "positive_branch": "if omega >= 0: thrust_axis_n = +c1_positive_omega * omega * omega",
+    "negative_branch": "if omega < 0: thrust_axis_n = -c1_negative_omega * omega * omega",
+    "equivalent_signed_form": "thrust_axis_n = c1_branch * omega * abs(omega), where c1_branch is selected by omega sign and stored as a positive magnitude here"
+  },
+  "coordinate_convention": {
+    "thrust_axis_n": "Signed thrust along the Unity thruster local positive axis.",
+    "positive_omega": "The measured positive RPM/omega direction used during rpm-sweep fitting.",
+    "unity_note": "If a Unity thruster Transform points opposite to the desired physical positive thrust direction, multiply thrust_axis_n by that thruster's axis_sign."
+  },
+  "identified_groups": {
+    "normal_propeller": {
+      "description": "正桨 group identified from M005 and M007.",
+      "motor_ids": ["M005", "M007"],
+      "c1_negative_omega": 0.000073,
+      "c1_positive_omega": 0.000088
+    },
+    "reverse_propeller": {
+      "description": "反桨 group identified from M006 and M008.",
+      "motor_ids": ["M006", "M008"],
+      "c1_negative_omega": 0.000092,
+      "c1_positive_omega": 0.00012
+    }
+  },
+  "motors": {
+    "M005": {
+      "canonical_index": 4,
+      "canonical_name": "H_LF",
+      "propeller_group": "normal_propeller",
+      "c1_negative_omega": 0.000073,
+      "c1_positive_omega": 0.000088
+    },
+    "M006": {
+      "canonical_index": 5,
+      "canonical_name": "H_RF",
+      "propeller_group": "reverse_propeller",
+      "c1_negative_omega": 0.000092,
+      "c1_positive_omega": 0.00012
+    },
+    "M007": {
+      "canonical_index": 6,
+      "canonical_name": "H_RB",
+      "propeller_group": "normal_propeller",
+      "c1_negative_omega": 0.000073,
+      "c1_positive_omega": 0.000088
+    },
+    "M008": {
+      "canonical_index": 7,
+      "canonical_name": "H_LB",
+      "propeller_group": "reverse_propeller",
+      "c1_negative_omega": 0.000092,
+      "c1_positive_omega": 0.00012
+    }
+  },
+  "recommended_unity_formula": {
+    "csharp": "float c1 = omegaRadPerSec >= 0f ? c1PositiveOmega : c1NegativeOmega; float thrustAxisN = Mathf.Sign(omegaRadPerSec) * c1 * omegaRadPerSec * omegaRadPerSec;"
+  },
+  "notes": [
+    "The coefficients are branch magnitudes. Do not keep the raw measured sign difference between M006 and M008 as a physical coefficient sign; handle direction through omega sign and Unity thruster axis_sign.",
+    "Use the grouped values for simulation unless per-motor repeated measurements show a stable motor-specific deviation.",
+    "These values are static bollard-pull parameters and do not include inflow speed, thruster-thruster interaction, voltage sag, current limiting, or vehicle-body flow effects."
+  ]
+}

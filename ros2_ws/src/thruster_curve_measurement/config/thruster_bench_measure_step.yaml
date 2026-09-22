@@ -1,0 +1,57 @@
+# Standalone single-thruster bench profile.
+#
+# Per-run values usually supplied on the command line:
+#   --thruster-port
+#   --sensor-port
+#   --csv / --summary-csv / --plot
+thruster_bench_measure:
+  mode: step
+
+  # Keep this conservative for first tank tests. The MCU firmware also applies
+  # its own hard output limit.
+  output_limit: 0.1
+
+  amplitude: 1.0
+  step: 0.1
+  step_commands:
+    - -0.3
+    - -0.2
+    - -0.1
+    - -0.05
+    - 0.0
+    - 0.05
+    - 0.1
+    - 0.2
+    - 0.3
+
+  step_hold: 5.0
+  step_sample: 2.0
+  step_rest: 1.0
+  repeat_count: 1
+  repeat_rest: 90.0
+
+  rate: 10.0
+  pre_zero: 5.0
+  settle: 3.0
+  post_zero: 5.0
+  zero_samples: 30
+  no_fit: false
+  fit_min_abs_command: 0.0
+  force_log_period: 1.0
+
+  thruster_baudrate: 115200
+  thruster_timeout: 0.02
+
+  sensor_baudrate: 115200
+  sensor_bytesize: 8
+  sensor_parity: N
+  sensor_stopbits: 1
+  sensor_timeout: 0.2
+  sensor_address: 205
+  sensor_count: 1
+  sensor_device_id: 1
+  sensor_divisor: 100.0
+  sensor_scale: 0.98
+  sensor_offset_n: 0.0
+
+  no_stop_on_exit: false

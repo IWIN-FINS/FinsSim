@@ -1,0 +1,22 @@
+base_config: trinet_capture_transport_baseline
+
+experiment:
+  name: trinet_capture_transport_baseline
+  seed: 42
+  tags:
+    - trinet-capture
+    - traditional-baseline
+    - pid-wrench
+
+env:
+  unity:
+    env_base_port: 4300
+    parallel_mode: multi_area
+  eval:
+    num_envs: 1
+    time_scale: 2.0
+    num_episodes: 1
+    time_scale: 2.0
+
+trainer:
+  backend: marl

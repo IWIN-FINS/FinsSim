@@ -1,0 +1,55 @@
+refractive_apriltag_pose:
+  ros__parameters:
+    detection_topic: /finsrov/vision/tag_detections_2d
+    depth_topic: /finsrov/hardware/depth_raw
+    imu_topic: /finsrov/hardware/imu_raw
+
+    constrained_pose_topic: /finsrov/vision/refracted_pose_6d
+    pure_pose_topic: /finsrov/vision/refracted_pose_6d_pure
+    status_topic: /finsrov/vision/refracted/status
+
+    world_frame_id: pool_world
+    body_frame_id: finsrov_base_link
+    camera_calibration_file: calibration/rgb_camera.yaml
+    extrinsics_file: state_estimation/config/state_fusion_extrinsics.yaml
+    marker_length_m: 0.093
+
+    # pool_world vertical constants are injected by launch from:
+    # state_estimation/config/pool_world.yaml
+    # /finsrov/hardware/depth_raw reports pressure-sensor depth from the water surface.
+
+    # Refractive model: air camera looking through a flat water surface.
+    n_air: 1.0003
+    n_water: 1.333
+    water_plane_normal: [0.0, 0.0, 1.0]
+    # water_plane_d is optional. If omitted, the node uses
+    # water_plane_d = -water_surface_z_m, so water_surface_z_m is the single
+    # source of truth for a flat horizontal water surface.
+    air_depth_threshold_m: 0.02
+    underwater_depth_threshold_m: 0.08
+
+    # Geometry checks are normalized by marker_length_m.
+    max_geometry_error_ratio: 0.7 # 原来的值：0.2
+    low_confidence_geometry_error_ratio: 0.08
+    max_iterations: 8
+    min_visible_tags: 1
+    publish_air_pose_on_constrained_topic: true
+    publish_surface_transition_pose_on_constrained_topic: true
+    # Mode is selected from pressure-derived body z plus T_body_tag height,
+    # not from the raw pressure-sensor depth alone. This handles a top-mounted
+    # tag staying at/above the water surface while the pressure sensor is deeper.
+    mode_selection_source: tag_height
+    air_tag_margin_m: 0.01
+    surface_tag_transition_margin_m: 0.04
+    underwater_tag_margin_m: 0.02
+    publish_pinhole_fallback_on_constrained_topic: true
+    pinhole_fallback_use_pressure_depth_z: true
+    pinhole_fallback_max_reprojection_error_px: 2.0
+    pinhole_fallback_reject_reasons: [no_valid_refracted_rays, geometry_error]
+
+    constrained_covariance_xy: 0.0025
+    constrained_covariance_z: 0.0025
+    constrained_covariance_roll_pitch: 0.02
+    constrained_covariance_yaw: 0.03
+    pure_covariance_xyz: 0.05
+    pure_covariance_rpy: 0.20

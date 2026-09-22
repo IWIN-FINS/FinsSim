@@ -1,0 +1,33 @@
+base_config: ppo_wrench_for_pose_empirical_thruster_mixer
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_parallel_2048
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, fossen6dof, training_area_replicator]
+  output_dir: artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_parallel_2048
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_10Hz_Server/HoldForPosition_Parallel.x86_64
+    env_base_port: 35105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 600
+    parallel_mode: multi_area
+
+  train:
+    num_envs: 2048
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 10.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    n_steps: 64
+    batch_size: 8192
+    total_timesteps: 320000000
+    checkpoint_freq: 5000000
+    eval_freq: 10000000

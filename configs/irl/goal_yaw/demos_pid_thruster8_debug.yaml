@@ -1,0 +1,23 @@
+# Desktop-only visual validation profile.  It must not be used for the
+# production dataset: it intentionally enables graphics and real-time speed.
+task_config: task_v1.yaml
+action_contract: thruster8_v1
+pid_expert_config: pid_expert_sim.yaml
+
+env:
+  unity:
+    env_path: ../../../artifacts/unity_builds/irl/linux/GoalYawIRL_Fossen_10Hz_Player/GoalYawIRL.x86_64
+    env_base_port: 26107
+    port_offset: 0
+    no_graphics: false
+    timeout_wait: 180
+    parallel_mode: multi_binary
+    environment_parameters:
+      goal_yaw_stratified_resets: 1.0
+  train:
+    num_envs: 1
+    time_scale: 1.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    num_episodes: 5

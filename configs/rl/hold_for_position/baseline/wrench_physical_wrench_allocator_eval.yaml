@@ -1,0 +1,36 @@
+# Traditional wrench baseline: fixed wrench-PD -> bounded physical B allocator.
+base_config: traditional_hold_position_wrench_physical_wrench_allocator
+
+experiment:
+  name: hold_for_position_baseline_wrench_physical_wrench_allocator_eval
+  seed: 42
+  tags: [rl, hold_for_position, baseline, wrench, traditional, physical_wrench_allocator, fossen6dof, eval]
+  output_dir: artifacts/evals/rl/hold_for_position/baseline/wrench_physical_wrench_allocator
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_15s_10Hz_Server/HoldForPosition_Parallel_15s.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 47127
+    port_offset: 0
+    no_graphics: false
+    timeout_wait: 600
+    environment_parameters:
+      finsim_hold.reward.mode: 1.0
+  train:
+    num_envs: 1
+    time_scale: 1.0
+  eval:
+    num_envs: 1
+    num_episodes: 10
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    control_debug_interval: 100
+    window_width: 1280
+    window_height: 720

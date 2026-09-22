@@ -1,0 +1,6 @@
+[submodule "python/finssim_marl/third_party/cleanmarl"]
+	path = python/finssim_marl/third_party/cleanmarl
+	url = https://github.com/IWIN-FINS/cleanmarl.git
+[submodule "python/finssim_marl/third_party/MARLlib"]
+	path = python/finssim_marl/third_party/MARLlib
+	url = https://github.com/IWIN-FINS/MARLlib.git

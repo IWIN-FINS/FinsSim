@@ -1,0 +1,17 @@
+# Standalone GoalYawIRL PID expert profile. These are the effective control
+# parameters of motion_control/config/FinsROV/traditional_pid_position_yaw_sim.yaml,
+# copied here so IRL does not depend on or modify the T1 ROS2 launch profile.
+schema: goal_yaw_irl_pid_expert_v1
+control_rate_hz: 60.0
+
+# traditional_pid_position leaves these at the established model defaults.
+# Order: depth [kp, ki, kd], surge [kp, ki, kd], sway [kp, ki, kd].
+position_pid_params: [5.0, 0.1, 0.5, 5.0, 0.3, 0.5, 5.0, 0.3, 0.5]
+yaw_pid_params: [0.001, 0.00005, 0.0002]
+
+allocator_control_linear_range: 10.0
+allocator_control_axis_ranges: [10.0, 5.0, 10.0, 10.0, 2.5, 10.0]
+allocator_allocation_mode: empirical_thruster_mixer
+# The PID output is normalized. Unity's NormalizedMaxForceRequest maps it to
+# each target thruster's current forward/reverse calibrated force bound.
+thruster_force_limit_n: 7.0

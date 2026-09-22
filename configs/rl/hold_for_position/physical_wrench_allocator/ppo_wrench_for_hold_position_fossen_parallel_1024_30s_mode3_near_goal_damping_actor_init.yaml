@@ -1,0 +1,51 @@
+# Mode 3 fine-tune of the physical 6-wrench position-hold policy.
+# The actor is transferred from the compatible mode-2 policy; the critic and
+# Adam optimizer start fresh because near-goal reward targets are reshaped.
+base_config: ppo_wrench_for_pose_physical_wrench_allocator
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_parallel_1024_30s_mode3_near_goal_damping_actor_init
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, physical_wrench_allocator, fossen6dof, domain_randomization, parallel_1024, 30s, mode3, near_goal_damping, actor_init]
+  output_dir: artifacts/runs/rl/hold_for_position/physical_wrench_allocator/ppo_wrench_for_hold_position_fossen_parallel_1024_30s_mode3_near_goal_damping_actor_init
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_30s_10Hz_Server/HoldForPosition_Parallel_30s.x86_64
+    env_base_port: 64105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    parallel_mode: multi_area
+    seed: 42
+    environment_parameters:
+      # Mode 3: mode-2 base reward plus near-goal damping. The low absolute
+      # energy cost preserves the ability to use steady hover trim; the action
+      # delta and angular-velocity costs target oscillation directly.
+      finsim_hold.reward.mode: 3.0
+      finsim_hold.reward.near_goal_radius: 0.75
+      finsim_hold.reward.near_goal_action_energy_penalty_scale: 0.15
+      finsim_hold.reward.near_goal_action_delta_penalty_scale: 0.05
+      finsim_hold.reward.near_goal_angular_velocity_penalty_scale: 0.01
+      finsim_hold.reward.near_goal_angular_velocity_penalty_max_radps: 5.0
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    init_actor_checkpoint: ./artifacts/runs/rl/hold_for_position/physical_wrench_allocator/ppo_wrench_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_dr/checkpoints/best_model.zip
+    # 64 * 1024 = 65,536 samples/update; 8 mini-batches per PPO epoch.
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    # This is a fresh mode-3 budget, not a continuation of the source run.
+    total_timesteps: 32768000
+    checkpoint_freq: 819200
+    eval_freq: 163840

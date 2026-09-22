@@ -1,0 +1,104 @@
+hydrodynamic_identifier:
+  ros__parameters:
+    auto_start: false
+    # Keep zero thrust between signed trials until Enter or the continue service.
+    pause_between_trials: false
+    publish_rate_hz: 50.0
+    output_directory: ./ros2_ws/data/hydrodynamic_identification
+    output_prefix: finsrov_fossen_6dof
+
+    thruster_topic: /finsrov/thrusters_out
+    motor_rpm_topic: /finsrov/hardware/motor_rpm_raw
+    hardware_telemetry_topic: /finsrov/hardware/telemetry
+    use_hardware_telemetry: true
+    imu_topic: /finsrov/imu_link
+    dvl_topic: /finsrov/dvl_link
+    sync_max_telemetry_age_sec: 0.02
+    sync_max_dvl_age_sec: 0.03
+    sync_buffer_sec: 2.0
+    hardware_bridge_config: ./ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+
+    # Internal controller/body frame follows the existing FinsSim convention:
+    # x forward, y up, z left. Raw real FLU/ENU body vectors are remapped as
+    # [x, z, y]. Messages whose frame_id is already controller_world or
+    # controller_body are passed through and are not remapped a second time.
+    ros_to_body_basis_indices: [0, 2, 1]
+    ros_to_body_basis_signs: [1.0, 1.0, 1.0]
+
+    # Identified axes:
+    # - surge_x, sway_z, yaw_y are forced step-response trials.
+    # - heave_y uses the selectable mode below; the default is dive + coast.
+    # - roll_x and pitch_z are active small-angle torque-pulse trials.
+    axes: [surge_x, heave_y, sway_z, roll_x, pitch_z, yaw_y]
+    include_negative: true
+    pre_zero_sec: 1.0
+    baseline_sec: 1.0
+    hold_sec: 9.0
+    # `dive_and_coast`: every heave_y amplitude becomes a controller -y dive.
+    # Then wait for true upward velocity and fit only the recorded ascent window.
+    # `step` preserves the old signed step-response behavior.
+    heave_y_identification_mode: dive_and_coast
+    heave_y_coast_sec: 30.0 # 下潜结束之后等待上浮的时间，等待上浮的时间超过这个判断为超时
+    heave_y_ascent_velocity_threshold_mps: 0.01
+    heave_y_ascent_sample_sec: 2.0
+    # Step axes are fitted from the beginning of excitation by default so the
+    # initial acceleration remains available for m_eff identification.
+    step_fit_start_sec: 0.0
+    # IMU linear_acceleration contains the stationary gravity projection.
+    # The identifier removes it internally before forming nu_dot; raw and
+    # compensated values are both written to CSV.
+    gravity_compensation_enabled: true
+    gravity_mps2: 9.80665
+    sample_sec: 1.5
+    rest_sec: 2.0
+    post_zero_sec: 1.0
+
+    # Wrench levels are physical target body wrench values before allocation.
+    # Units: N for force axes, Nm for yaw_y.
+    surge_x_levels: [6.0, 12.0, 18.0]
+    heave_y_levels: [4.5, 9.0, 13.5]
+    sway_z_levels: [4.5, 9.0, 13.5]
+    yaw_y_levels: [0.60, 1.20, 1.80]
+
+    # Roll/pitch levels are target torque pulses in Nm. The node applies the
+    # pulse for attitude_pulse_sec, then sends zero thrust and records ringdown.
+    roll_x_levels: [0.18, 0.36]
+    pitch_z_levels: [0.18, 0.36]
+    attitude_pulse_sec: 0.6
+    attitude_ringdown_sec: 3.0
+    attitude_fit_start_sec: 0.05
+    attitude_min_abs_tau_nm: 0.005
+    attitude_min_abs_angle_rad: 0.003
+    attitude_min_abs_rate_radps: 0.003
+    roll_x_max_abs_angle_deg: 20.0 # 小角度才能标定fossen的p/q阻尼（平衡态附近线性近似） 但是太小了会导致噪声影响过大，可以大的limit但是截取小范围fit
+    roll_x_max_abs_rate_radps: 10.0
+    pitch_z_max_abs_angle_deg: 20.0
+    pitch_z_max_abs_rate_radps: 10.0
+    # Supervised diagnostics only. Keep false for normal pool experiments.
+    ignore_attitude_safety_checks: false
+    roll_x_equilibrium_angle_rad: 0.0
+    pitch_z_equilibrium_angle_rad: 0.0
+
+    # Per-thruster canonical force clamp. Empty/zero values use hardware YAML
+    # signed RPM curve limits. Use 1.0 only when the test area is clear.
+    max_wrench_scale: 1.0
+    rpm_stale_sec: 0.3
+    min_fit_abs_tau: 0.05
+    fit_velocity_deadband: 0.005
+    # Robust fit gates for physically implausible acceleration spikes/pulses.
+    # Set a value to 0.0 to disable that gate.
+    fit_max_abs_linear_accel_mps2: 5.0
+    fit_max_abs_angular_accel_radps2: 3.0
+    fit_accel_outlier_mad_threshold: 8.0
+    fit_accel_spike_local_mad_threshold: 6.0
+    fit_accel_spike_local_window: 5
+    # Physical coefficient bounds. Inertia, damping and restoring stiffness are
+    # non-negative by default; bias is allowed to be positive or negative.
+    fit_constrain_physical_coefficients: true
+    fit_max_effective_mass_kg: 100.0
+    fit_max_effective_inertia_kgm2: 20.0
+    fit_max_linear_damping: 500.0
+    fit_max_quadratic_damping: 1000.0
+    fit_max_restoring_stiffness_nm_per_rad: 100.0
+    fit_max_abs_bias: 100.0
+    acceleration_filter_alpha: 0.35

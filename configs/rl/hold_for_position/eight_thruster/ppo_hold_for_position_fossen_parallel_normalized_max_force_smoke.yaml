@@ -1,0 +1,43 @@
+# Disposable end-to-end Unity Player + PPO smoke for the normalized-max-force
+# Fossen hold-position scene.  This is intentionally not a production profile.
+base_config: ppo_control_for_pose
+
+experiment:
+  name: ppo_hold_for_position_fossen_parallel_normalized_max_force_smoke
+  seed: 42
+  tags: [smoke, hold_for_position, eight_thruster, fossen6dof, normalized_max_force]
+  output_dir: artifacts/runs/rl/hold_for_position/eight_thruster/smoke/fossen_parallel_normalized_max_force
+
+env:
+  unity:
+    env_path: ${FINSSIM_UNITY_ROOT}/artifacts/unity_builds/hold-position/fossen-parallel-normalized-max-force-server/FinsSimUnity.x86_64
+    env_base_port: 48105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 300
+    parallel_mode: multi_area
+    seed: 42
+    environment_parameters:
+      finsim_hold.reward.mode: 1.0
+  train:
+    num_envs: 1
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    # Two PPO rollouts, one optimization epoch: enough to exercise reset,
+    # observations, actions, learning, metrics, and checkpoint persistence.
+    device: cpu
+    overwrite: true
+    test: true
+    n_steps: 64
+    batch_size: 64
+    n_epochs: 1
+    total_timesteps: 128
+    checkpoint_freq: 128
+    eval_freq: 512

@@ -1,0 +1,59 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    backend_name: traditional_pid_velocity
+    checkpoint_path: ""
+    # backend_name and checkpoint_path belong to this controller profile.
+    # Select a different YAML profile instead of overriding either parameter.
+    device: auto
+    control_rate_hz: 60.0
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: false
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    # ROS FLU/ENU -> controller xyz remap.
+    # Default means:
+    # controller.x = ros.x
+    # controller.y = ros.z
+    # controller.z = ros.y
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    # Controller positions are already Unity/controller coordinates.
+    # Real-vehicle pool/depth offsets must be handled before this node.
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    thruster_output_mode: force_n
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+    odom_topic: ""
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast, hold]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]

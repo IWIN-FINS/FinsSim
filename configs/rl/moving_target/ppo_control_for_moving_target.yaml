@@ -1,0 +1,44 @@
+base_config: ppo_control_for_moving_target_dynamic
+
+# 移动目标跟踪配置，不覆盖原有固定目标点训练配置。
+# Unity 侧对应要求：
+# - 目标立方体挂载 SmoothRandomMovingTarget
+# - 潜器 Agent 挂载 ControlForMovingTargetReward
+# - BehaviorParameters: Vector Observation Size = 13, Continuous Actions = 8
+#
+# 当前机器上 3090 是 GPU index 1；运行训练时可用：
+# CUDA_VISIBLE_DEVICES=1 uv run --package finssim-cli finssim rl train -c configs/rl/moving_target/ppo_control_for_moving_target.yaml
+
+experiment:
+  name: ppo_control_for_moving_target_10Hz
+  seed: 42
+  tags:
+    - ppo
+    - position_control
+    - moving_target
+    - tracking
+    - observation13
+    - no_yaw_control
+  output_dir: artifacts/runs/rl/moving_target/ppo_control_for_moving_target_obs13
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/ControlForPosition_Dynamic_10Hz_Server/ControlForPosition.x86_64
+    env_base_port: 15025
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 360
+    parallel_mode: multi_binary
+
+  train:
+    num_envs: 8
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 10.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    overwrite: true

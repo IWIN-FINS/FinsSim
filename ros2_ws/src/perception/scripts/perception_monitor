@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+from perception.perception_monitor import main
+
+if __name__ == "__main__":
+    main()

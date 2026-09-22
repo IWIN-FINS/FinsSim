@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finssim-rl"
+version = "0.1.0"
+description = "Single-agent RL backend for the FinsSim underwater simulation platform."
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = "==3.10.12"
+dependencies = [
+    "gymnasium[classic-control]>=1.2.2",
+    "lz4>=4.4.5",
+    "mlagents-envs==1.1.0",
+    "numpy>=1.23.5,<2",
+    "shimmy>=2.0",
+    "stable-baselines3[extra]>=2.7.1",
+    "torch",
+    "tyro>=1.0.6",
+]
+
+[project.optional-dependencies]
+# The default installation intentionally contains only the SB3/PPO Unity path.
+# Install a named extra only when using its corresponding entry point.
+debug = ["debugpy>=1.8.20"]
+export = ["onnx", "onnxruntime", "onnxscript"]
+imitation = ["imitation==1.0.1"]
+marl = [
+    "benchmarl>=1.5.2",
+    "marllib>=0.8.0",
+    "pettingzoo>=1.15.0",
+    "ray[data,train,tune,serve,rllib]",
+    "supersuit>=3.10.0",
+    "torchrl>=0.11.1",
+    "tree>=0.2.4",
+    "twentytab-tree>=0.7",
+    "torchvision",
+]
+
+[project.scripts]
+finssim-rl = "finssim_rl.cli:main"
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv]
+override-dependencies = [
+    "ml-dtypes==0.5.1",  # 强行指定这个版本
+    "markupsafe==2.1.5",
+    "grpcio>=1.60.0",
+    "gymnasium>=1.2.2",
+    "onnx>=1.16.0",
+    "onnxscript",          # 如果一定要用，不要手动锁死版本，让 uv 自动匹配
+    "stable-baselines3[extra]>=2.7.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]  # 告诉 pip 去 src 目录下找源代码
+
+[tool.setuptools.package-data]
+finssim_rl = ["models/data/*.pt"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

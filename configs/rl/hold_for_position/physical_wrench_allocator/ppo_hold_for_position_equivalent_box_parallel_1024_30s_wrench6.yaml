@@ -1,0 +1,44 @@
+# Six-policy-output physical wrench experiment. The policy emits
+# [Fx,Fy,Fz,Mx,My,Mz], then physical_wrench_allocator maps it into Unity's
+# canonical eight FinsROV thruster actions inside the rollout adapter.
+base_config: ppo_wrench_for_pose_physical_wrench_allocator
+
+experiment:
+  name: ppo_hold_for_position_equivalent_box_parallel_1024_30s_wrench6
+  seed: 42
+  tags: [ppo, hold_for_position, wrench6, physical_wrench_allocator, learning_to_swim_equivalent_box, parallel_1024, 30s]
+  output_dir: artifacts/runs/rl/hold_for_position/physical_wrench_allocator/ppo_hold_for_position_equivalent_box_parallel_1024_30s_wrench6
+
+env:
+  unity:
+    # Shared 8-thruster Player. The rollout adapter maps policy wrench6 to
+    # this Player's canonical 8D action ABI.
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_LearningToSwimEquivalentBox_Parallel_1024_30s_8Thruster_Server/HoldForPosition_EquivalentBox_8Thruster.x86_64
+    env_base_port: 63005
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    parallel_mode: multi_area
+    seed: 42
+    environment_parameters:
+      # Keep the reward identical to the direct-eight-thruster experiment.
+      finsim_hold.reward.mode: 1.0
+      finsim_hold.reward.near_goal_action_energy_penalty_scale: 0.60
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    total_timesteps: 32768000
+    checkpoint_freq: 819200
+    eval_freq: 163840

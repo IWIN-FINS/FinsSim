@@ -1,0 +1,67 @@
+schema_version: 1
+analysis_id: T1-static-water-PID-PPO-comparison-20260826-lockstep
+description: >-
+  Rebuilt comparison after re-analysing every available T1 raw rosbag on
+  2026-08-26. Formal controller comparison uses the newest complete one-repeat
+  batch for each controller/domain. Simulation batches must pass the
+  ros2_control_lockstep timestamp audit; historical free-running simulation
+  batches remain diagnostic only.
+
+# Generated-analysis destination; never a raw experiment directory.
+output_directory: ros2_ws/data/experiments/analysis/T1_static_water_pid_ppo_20260826_lockstep
+
+target_ids:
+  - P01_front_left_shallow
+  - P02_front_right_shallow
+  - P03_rear_right_shallow
+  - P04_rear_left_shallow
+  - P05_front_left_deep
+  - P06_front_right_deep
+  - P07_rear_right_deep
+  - P08_rear_left_deep
+
+domains:
+  hardware:
+    state_semantics: fused_controller_world_estimate
+    methods:
+      PID:
+        label: PID
+        action_interface: closed_loop_pid_to_bounded_canonical_thruster8
+        run_directory: ros2_ws/data/experiments/hardware/T1/PID/20260825_195017_T1-HW-PID-PPO_traditional_pid_position_yaw
+        expected_target_ids: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow, P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+      PPO_WRENCH6:
+        label: PPO-Wrench6
+        action_interface: normalized_wrench6_to_bounded_allocator_to_canonical_thruster8
+        run_directory: ros2_ws/data/experiments/hardware/T1/PPO_WRENCH6/20260825_193357_T1-HW-PID-PPO_ppo_wrench_for_pose_physical_wrench_allocator
+        expected_target_ids: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow, P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+      PPO_THRUSTER8:
+        label: PPO-Thruster8 (reprojected)
+        action_interface: source_thruster8_to_wrench_projection_to_bounded_allocator_to_canonical_thruster8
+        run_directory: ros2_ws/data/experiments/hardware/T1/PPO_THRUSTER8/20260825_191145_T1-HW-PID-PPO_ppo_control_for_pose_dr_reprojected_physical_wrench_allocator
+        expected_target_ids: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow, P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+
+  simulation:
+    state_semantics: unity_controller_world_truth
+    methods:
+      PID:
+        label: PID
+        action_interface: closed_loop_pid_to_bounded_canonical_thruster8
+        run_directory: ros2_ws/data/experiments/simulation/T1/PID/20260826_181037_E5-T1-UNITY-ROS2_traditional_pid_position_yaw_sim
+        expected_target_ids: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow, P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+      PPO_WRENCH6:
+        label: PPO-Wrench6
+        action_interface: normalized_wrench6_to_bounded_allocator_to_canonical_thruster8
+        run_directory: ros2_ws/data/experiments/simulation/T1/PPO_WRENCH6/20260826_180440_E5-T1-UNITY-ROS2_ppo_wrench6_physical_allocator_sim
+        expected_target_ids: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow, P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+      PPO_THRUSTER8:
+        label: PPO-Thruster8 (raw direct)
+        action_interface: raw_canonical_thruster8_direct_force_request_to_unity
+        run_directory: ros2_ws/data/experiments/T1_simulation/PPO_THRUSTER8/20260826_180751_E5-T1-UNITY-ROS2_ppo_thruster8_raw_action_sim
+        expected_target_ids: [P01_front_left_shallow, P02_front_right_shallow, P03_rear_right_shallow, P04_rear_left_shallow, P05_front_left_deep, P06_front_right_deep, P07_rear_right_deep, P08_rear_left_deep]
+
+comparability_notes:
+  - Every formal condition has one completed static-water repeat for each of the same eight target points; the statistical unit is a target/trial, never a ROS frame.
+  - Metrics use the late-hold 40--60 s window reconstructed from recorded hold-start evidence. Hardware uses the fused controller-world estimate; simulation uses Unity controller-world truth.
+  - Every selected simulation trial uses ros2_control_lockstep and passed its pose, command, and controller-ack timestamp audit. Historical accelerated free-running simulation trials are excluded from formal ranking.
+  - Hardware PPO-Thruster8 reprojects its source eight-thruster action through the physical wrench allocator, whereas simulation PPO-Thruster8 uses the raw direct-action evaluation profile. They are separate execution conditions, not an interchangeable checkpoint claim.
+  - Best-target summaries are descriptive display selections only. Controller conclusions must use the all-eight-target aggregate and target-matched comparisons.

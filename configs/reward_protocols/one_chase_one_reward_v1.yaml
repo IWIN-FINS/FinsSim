@@ -1,0 +1,32 @@
+protocol: one_chase_one_reward_v1
+version: 1
+prefix: finsim_1c1.reward.
+default_mode: dense_chase
+
+modes:
+  dense_chase: 0
+  distance_only: 1
+  distance_plus_subgoal: 2
+  sparse_capture: 3
+
+parameters:
+  per_step_penalty: -0.0005
+  distance_progress_scale: 0.9
+  distance_scale: 0.08
+  distance_range: 8.0
+  heading_alignment_scale: 0.01
+  approach_velocity_scale: 0.08
+  angular_velocity_penalty_scale: 0.002
+  action_energy_penalty_scale: 0.001
+  action_delta_penalty_scale: 0.0015
+  near_capture_distance: 1.2
+  near_capture_bonus_scale: 0.03
+  success_reward: 50.0
+  timeout_penalty: -5.0
+  out_of_bounds_penalty: -1.0
+  capture_distance: 0.8
+  stable_capture_relative_speed: 0.35
+  stable_capture_steps_required: 5
+  subgoal_to_prey_scale: 0.0
+  subgoal_to_prey_range: 1.5
+  subgoal_stale_timeout_sec: 0.5

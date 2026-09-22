@@ -1,0 +1,96 @@
+# Sim-only 6D wrench controller configuration.
+# Use this profile with the Unity adapter launched using topic_prefix:=/sim.
+# The similarly named real-vehicle profile ppo_wrench_for_pose.yaml uses the
+# explicit empirical-mixer backend. Use the separate physical allocator profile
+# for a newly trained physical-wrench checkpoint.
+#
+# Example:
+#   ./scripts/launch_grpc_ros_adapter.sh topic_prefix:=/sim
+#   ros2 launch motion_control motion_controller.launch.py \
+#     params_file:=.../ppo_wrench_for_pose_sim.yaml
+#
+# The wrench policy order is [surge, sway, heave, roll, pitch, yaw].
+# The allocator converts it to body [Fx, Fy, Fz, Mx, My, Mz] and then to
+# the canonical eight-thruster order below.
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    backend_name: ppo_wrench_for_pose_empirical_thruster_mixer
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_dr_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_yaw_torque_dr_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_v2_0809/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_fossen/checkpoints/best_model.zip"
+    checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_fossen_init/checkpoints/best_model.zip"
+
+    device: cuda
+    control_rate_hz: 10.0
+    policy_action_rate_limit_per_sec: 0.75
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /sim/motion_controller/control_mode
+
+    # ROS FLU/ENU -> controller xyz remap.
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: wrench6d_force_n
+
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    # negative values are magnitudes; the allocator applies the negative sign.
+    # Simulation intentionally uses one symmetric force limit for every
+    # channel so allocator asymmetry does not come from real thruster curves.
+    # This must match FinsROV_Fossen.prefab: every Unity Thruster is +/-7 N.
+    thruster_force_limits_n:
+      positive: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+      negative: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+
+    # Historical checkpoint compatibility. This remains the old normalized-A
+    # contract. Use ppo_wrench_for_pose_physical_wrench_allocator_sim.yaml
+    # only with a model trained from ppo_wrench_for_pose_physical_wrench_allocator.
+    wrench6d:
+      allocation_mode: empirical_thruster_mixer
+
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    # sim_truth_state_status reads `status_topic` for its publisher.
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /sim/motion_controller/command/position_controller_world
+    command_position_body_topic: /sim/motion_controller/command/position_controller_body
+    command_pose_body_topic: /sim/motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /sim/motion_controller/command/velocity_controller_body
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    reset_topic: /sim/finsrov/reset
+    reset_service_name: /sim/motion_controller/reset_vehicle
+    status_active_pose_topic: /sim/motion_controller/status/active_pose
+    status_error_body_topic: /sim/motion_controller/status/error_body
+    status_reached_topic: /sim/motion_controller/status/reached
+    debug_observation_topic: /sim/motion_controller/debug/observation
+    debug_action_topic: /sim/motion_controller/debug/action
+    debug_wrench6d_topic: /sim/motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+    debug_policy_info_topic: /sim/motion_controller/debug/policy_info
+
+    # 16D observation supplied to the empirical-mixer PPO wrench checkpoint, not PID.
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

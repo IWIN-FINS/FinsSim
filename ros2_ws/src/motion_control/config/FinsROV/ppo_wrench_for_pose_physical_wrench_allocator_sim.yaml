@@ -1,0 +1,71 @@
+# Physical-wrench deployment profile for a checkpoint trained with
+# configs/rl/pose_control/ppo_wrench_for_pose_fossen_physical_wrench_allocator.yaml.
+# It intentionally does not share the old ppo_wrench_for_pose_sim.yaml
+# checkpoint contract.
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    backend_name: ppo_wrench_for_pose_physical_wrench_allocator
+    checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_fossen_physical_wrench_allocator/checkpoints/best_model.zip"
+
+    device: cuda
+    control_rate_hz: 10.0
+    policy_action_rate_limit_per_sec: 0.75
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /sim/motion_controller/control_mode
+
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: wrench6d_force_n
+    thruster_force_limits_n:
+      positive: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+      negative: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+
+    # Policy order: [surge, sway, heave, roll, pitch, yaw].
+    # Units: [N, N, N, N*m, N*m, N*m].
+    wrench6d:
+      allocation_mode: physical_wrench_allocator
+      wrench_limits: [19.528527, 18.415027, 22.501886, 3.863995, 3.079985, 7.080833]
+
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /sim/motion_controller/command/position_controller_world
+    command_position_body_topic: /sim/motion_controller/command/position_controller_body
+    command_pose_body_topic: /sim/motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /sim/motion_controller/command/velocity_controller_body
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    reset_topic: /sim/finsrov/reset
+    reset_service_name: /sim/motion_controller/reset_vehicle
+    status_active_pose_topic: /sim/motion_controller/status/active_pose
+    status_error_body_topic: /sim/motion_controller/status/error_body
+    status_reached_topic: /sim/motion_controller/status/reached
+    debug_observation_topic: /sim/motion_controller/debug/observation
+    debug_action_topic: /sim/motion_controller/debug/action
+    debug_wrench6d_topic: /sim/motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+    debug_policy_info_topic: /sim/motion_controller/debug/policy_info
+
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

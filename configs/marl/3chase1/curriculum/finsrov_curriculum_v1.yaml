@@ -1,0 +1,115 @@
+base_config: chasing_3_chase_1_end_to_end
+
+experiment:
+  name: finsrov_3chase1_curriculum_v1
+  seed: 42
+  tags:
+    - finsrov
+    - 3chase1
+    - curriculum
+    - environment-parameters
+
+unity:
+  env_path: artifacts/unity_builds/marl/linux/FinsROV/3Chase1_headless/3Chase1.x86_64
+  env_base_port: 7600
+  num_envs: 8
+  time_scale: 10.0
+  no_graphics: true
+  environment_parameters:
+    finsim_3c1.lesson_id: 0
+    finsim_3c1.capture.criterion: 2
+    finsim_3c1.capture.net_surface_distance: 1.20
+    finsim_3c1.capture.net_surface_hold_time: 0.00
+    finsim_3c1.capture.uuv_distance: 1.50
+    finsim_3c1.reward.mode: 1 # 简单直接追prey
+    finsim_3c1.reward.chaser_capture: 20.0
+    finsim_3c1.reward.fish_capture: -20.0
+    finsim_3c1.reward.chaser.step_penalty: -0.0005
+    finsim_3c1.reward.chaser.simple_chase_distance: 0.04
+    finsim_3c1.reward.chaser.simple_chase_progress: 0.20
+    finsim_3c1.reward.chaser.simple_chase_distance_range: 8.0
+    finsim_3c1.reward.chaser.fish_closing: 0.08
+    finsim_3c1.reward.chaser.netter_spacing: 0.015
+    finsim_3c1.reward.chaser.netter_spacing_progress: 0.040
+    finsim_3c1.reward.chaser.herder_fish_closing: 0.06
+    finsim_3c1.reward.chaser.herding_progress: 0.12
+    finsim_3c1.reward.chaser.angular_velocity_penalty: 0.002
+    finsim_3c1.reward.chaser.linear_velocity_penalty: 0.0005
+    finsim_3c1.reward.chaser.action_magnitude_penalty: 0.001
+    finsim_3c1.reward.chaser.action_delta_penalty: 0.002
+    finsim_3c1.reward.prey.survival: 0.0002
+    finsim_3c1.reward.prey.average_separation_progress: 0.02
+    finsim_3c1.reward.prey.nearest_threat_progress: 0.05
+    finsim_3c1.prey.move_speed: 0.25
+    finsim_3c1.prey.vertical_speed_scale: 0.15
+
+curriculum:
+  enabled: true
+  update_interval_steps: 1000
+  lessons:
+    - name: uuv_proximity_bootstrap
+      start_step: 0
+      parameters:
+        finsim_3c1.lesson_id: 0
+        finsim_3c1.capture.criterion: 2
+        finsim_3c1.capture.uuv_distance: 1.50
+        finsim_3c1.capture.net_surface_distance: 1.20
+        finsim_3c1.capture.net_surface_hold_time: 0.00
+        finsim_3c1.reward.mode: 1
+        finsim_3c1.reward.chaser_capture: 20.0
+        finsim_3c1.reward.fish_capture: -20.0
+        finsim_3c1.reward.chaser.simple_chase_distance: 0.04
+        finsim_3c1.reward.chaser.simple_chase_progress: 0.20
+        finsim_3c1.reward.chaser.simple_chase_distance_range: 8.0
+        finsim_3c1.reward.chaser.action_delta_penalty: 0.001
+        finsim_3c1.prey.move_speed: 0.25
+        finsim_3c1.prey.vertical_speed_scale: 0.10
+
+    - name: net_surface_capture
+      start_step: 1500000
+      parameters:
+        finsim_3c1.lesson_id: 1
+        finsim_3c1.capture.criterion: 0
+        finsim_3c1.capture.net_surface_distance: 1.00
+        finsim_3c1.capture.net_surface_hold_time: 0.10
+        finsim_3c1.reward.mode: 0
+        finsim_3c1.reward.chaser_capture: 25.0
+        finsim_3c1.reward.fish_capture: -25.0
+        finsim_3c1.reward.chaser.fish_closing: 0.08
+        finsim_3c1.reward.chaser.netter_spacing: 0.015
+        finsim_3c1.reward.chaser.netter_spacing_progress: 0.040
+        finsim_3c1.reward.chaser.herder_fish_closing: 0.06
+        finsim_3c1.reward.chaser.herding_progress: 0.12
+        finsim_3c1.reward.chaser.simple_chase_distance_range: 8.0
+        finsim_3c1.prey.move_speed: 0.30
+        finsim_3c1.prey.vertical_speed_scale: 0.15
+
+    - name: strict_net_surface
+      start_step: 4000000
+      parameters:
+        finsim_3c1.lesson_id: 2
+        finsim_3c1.capture.criterion: 0
+        finsim_3c1.capture.net_surface_distance: 0.80
+        finsim_3c1.capture.net_surface_hold_time: 0.25
+        finsim_3c1.reward.mode: 0
+        finsim_3c1.reward.chaser_capture: 30.0
+        finsim_3c1.reward.fish_capture: -30.0
+        finsim_3c1.reward.chaser.fish_closing: 0.06
+        finsim_3c1.reward.chaser.netter_spacing: 0.015
+        finsim_3c1.reward.chaser.netter_spacing_progress: 0.040
+        finsim_3c1.reward.chaser.herder_fish_closing: 0.05
+        finsim_3c1.reward.chaser.herding_progress: 0.10
+        finsim_3c1.reward.chaser.simple_chase_distance_range: 8.0
+        finsim_3c1.reward.chaser.action_magnitude_penalty: 0.0015
+        finsim_3c1.reward.chaser.action_delta_penalty: 0.0030
+        finsim_3c1.prey.move_speed: 0.40
+        finsim_3c1.prey.vertical_speed_scale: 0.25
+
+trainer:
+  backend: marl
+  overrides:
+    critic_variant: critic_multihead
+    total_timesteps: 10000000
+    batch_size: 64
+    num_eval_envs: 4
+    overwrite: true

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finssim-cli"
+version = "0.1.0"
+description = "Command line entry points for the FinsSim platform."
+license = "Apache-2.0"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "finssim-core",
+    "typer>=0.12,<1",
+]
+
+[project.scripts]
+finssim = "finssim_cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finssim_cli"]

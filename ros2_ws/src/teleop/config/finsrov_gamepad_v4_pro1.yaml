@@ -1,0 +1,70 @@
+finsrov_joystick_teleop:
+  ros__parameters:
+    mode: wrench
+    joystick_index: 0
+    rate_hz: 30.0
+    deadband: 0.08
+    publish_zero_when_disabled: true
+    start_enabled: false
+    frame_id: finsrov_base_link
+
+    thruster_topic: /finsrov/thrusters_out
+    enabled_topic: /finsrov/teleop/enabled
+    wrench_topic: /finsrov/teleop/body_wrench_cmd
+    status_topic: /finsrov/teleop/status
+
+    # Common pygame/Xbox-style mapping. Use joy_test.py or teleop/status to
+    # adjust these values for a different gamepad layout.
+    left_x_axis: 0
+    left_y_axis: 1
+    # Flydigi Direwolf 2 in PC XInput mode: LT/RT are independent axes and
+    # normally report -1.0 at rest, +1.0 when fully pressed. Verify once via
+    # /finsrov/teleop/status after reconnecting or changing controller mode.
+    left_trigger_axis: 2
+    right_x_axis: 3
+    right_trigger_axis: 5
+    trigger_rest_value: -1.0
+    trigger_pressed_value: 1.0
+    # SELECT/BACK toggles wrench <-> direct output modes on its press edge.
+    mode_switch_button: 6
+    start_button: 7
+    emergency_stop_button: 1
+    precision_button: 5
+    boost_button: 2
+
+    # Pushing the left stick upward is usually negative in pygame.
+    surge_axis_sign: -1.0
+    sway_axis_sign: 1.0
+    yaw_axis_sign: 1.0
+
+    # Cruise is the default safe operational range.
+    max_surge_force_n: 6.0
+    max_sway_force_n: 4.0
+    max_heave_force_n: 5.0
+    max_yaw_moment_nm: 0.8
+
+    # Hold RB for precise maneuvering. RB takes precedence over boost.
+    precision_surge_force_n: 2.0
+    precision_sway_force_n: 1.5
+    precision_heave_force_n: 1.5
+    precision_yaw_moment_nm: 0.25
+
+    # Hold X for boost. Configure the Flydigi M1 rear paddle to emit X so a
+    # middle finger can use boost without releasing the right stick.
+    boost_surge_force_n: 10.0
+    boost_sway_force_n: 7.0
+    boost_heave_force_n: 8.0
+    boost_yaw_moment_nm: 1.2
+
+    direct_yaw_force_n: 0.8
+
+    # New physical FinsROV allocator. Policy order is
+    # [surge, sway, heave, roll, pitch, yaw]; units are [N, N, N, N*m, N*m, N*m].
+    # Teleop itself commands surge/sway/heave/yaw and maps them into the shared
+    # controller-body order [Fx, Fy, Fz, Mx, My, Mz] before allocation.
+    physical_wrench_limits_policy: [18.586585, 18.068824, 25.636077, 3.791353, 2.535180, 6.947713]
+
+    # Real force envelopes in canonical order:
+    # [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    force_limits_positive_n: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+    force_limits_negative_n: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]

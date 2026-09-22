@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+from perception.calibration_tools.calibrate_camera_chessboard import main
+
+if __name__ == "__main__":
+    main()

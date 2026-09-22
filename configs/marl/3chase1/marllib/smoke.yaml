@@ -1,0 +1,33 @@
+base_config: unity_3chase1
+
+experiment:
+  name: marllib_3chase1_smoke
+  seed: 41
+  tags:
+    - marllib
+    - smoke
+
+unity:
+  env_path: artifacts/unity_builds/marl/linux/FinsROV/3Chase1_headless/3Chase1.x86_64
+  num_envs: 1
+  env_base_port: 7100
+  time_scale: 10.0
+  no_graphics: true
+
+trainer:
+  backend: marllib
+  overrides:
+    algorithm: mappo
+    hyperparam_source: test
+    share_policy: individual
+    model_core_arch: mlp
+    model_encode_layer: 64-64
+    stop_iters: 1
+    stop_timesteps: 900
+    episode_limit: 900
+    local_mode: true
+    num_gpus: 0
+    checkpoint_freq: 0
+    checkpoint_end: false
+    prey_action_source: wrapper_escape
+    seed: 41

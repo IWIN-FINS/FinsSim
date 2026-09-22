@@ -1,0 +1,82 @@
+    # Unity/MARUS T2 trajectory PID baseline.  This is intentionally separate
+# from the hardware profile: Unity publishes controller_world directly and
+# receives force commands under /sim, while T2 does not command yaw.
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    use_sim_time: true
+    lockstep_enabled: true
+    lockstep_clock_topic: /clock
+    lockstep_ack_topic: /sim/motion_controller/debug/control_tick_complete
+    backend_name: traditional_pid_position
+    checkpoint_path: ""
+    device: auto
+    # The lockstep scene integrates with Unity's 0.02 s fixed step.  Use a
+    # matching 50 Hz simulation PID tick rather than declaring an unachievable
+    # 60 Hz update rate between physics samples.
+    control_rate_hz: 50.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /sim/motion_controller/control_mode
+
+    # The trajectory transport uses an identity quaternion only as a message
+    # requirement.  It must never become a yaw=0 target.
+    use_target_orientation: false
+    require_target_orientation: false
+    traditional_enable_yaw_control: false
+    traditional_yaw_pid_params: [0.0, 0.0, 0.0]
+    stop_on_goal_reached: false
+    position_tolerance: 0.05
+    orientation_tolerance_deg: 5.0
+    velocity_tolerance: 0.05
+
+    # VehicleRosBridge publishes the Unity controller basis directly:
+    # x forward, y up/depth, z left.
+    ros_to_controller_basis_indices: [0, 1, 2]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    status_stamped_topic: /sim/finsrov/controller/state/status_stamped
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /sim/motion_controller/command/position_controller_world
+    command_position_body_topic: /sim/motion_controller/command/position_controller_body
+    command_pose_body_topic: /sim/motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /sim/motion_controller/command/velocity_controller_body
+    command_trajectory_topic: /sim/motion_controller/command/trajectory
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    reset_topic: /sim/finsrov/reset
+    reset_service_name: /sim/motion_controller/reset_vehicle
+    status_active_pose_topic: /sim/motion_controller/status/active_pose
+    status_error_body_topic: /sim/motion_controller/status/error_body
+    status_reached_topic: /sim/motion_controller/status/reached
+    debug_trajectory_reference_topic: /sim/motion_controller/debug/trajectory_reference
+    # Header-stamped mirror used by T2 simulation analysis.
+    debug_trajectory_reference_stamped_topic: /sim/motion_controller/debug/trajectory_reference_stamped
+    debug_action_topic: /sim/motion_controller/debug/policy_action
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+
+    # Unity's Fossen scene uses the training-time symmetric +/-7 N envelope.
+    thruster_topic: /sim/finsrov/thrusters_out
+    pwm_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: force_n
+    thruster_force_limits_n:
+      positive: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+      negative: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+
+    # Same controller structure as the hardware baseline.  These are a
+    # frozen simulation baseline, not an implicit import of hardware curves.
+    traditional_pid_params: [12.0, 0.0, 1.0, 40.0, 0.2, 1.6, 40.0, 0.2, 1.6]
+    traditional_integral_decay: 0.985
+    traditional_allocator_control_linear_range: 10.0
+    traditional_allocator_control_axis_ranges: [10.0, 10.0, 10.0, 20.0, 20.0, 20.0]
+    traditional_allocator_allocation_mode: empirical_thruster_mixer

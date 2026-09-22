@@ -1,0 +1,34 @@
+base_config: unity_3chase1
+
+experiment:
+  name: marllib_3chase1_ippo
+  seed: 43
+  tags:
+    - marllib
+    - benchmark
+    - ippo
+
+unity:
+  env_path: artifacts/unity_builds/marl/linux/FinsROV/3Chase1_headless/3Chase1.x86_64
+  num_envs: 1
+  env_base_port: 7300
+  time_scale: 10.0
+  no_graphics: true
+
+trainer:
+  backend: marllib
+  overrides:
+    algorithm: ippo
+    hyperparam_source: common
+    share_policy: individual
+    model_core_arch: mlp
+    model_encode_layer: 128-128
+    stop_iters: 100
+    stop_timesteps: 1000000
+    episode_limit: 900
+    local_mode: false
+    num_gpus: 0
+    checkpoint_freq: 50
+    checkpoint_end: true
+    prey_action_source: wrapper_escape
+    seed: 43

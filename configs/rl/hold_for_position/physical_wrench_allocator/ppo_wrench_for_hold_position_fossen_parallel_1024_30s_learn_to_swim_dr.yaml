@@ -1,0 +1,43 @@
+# Physical wrench-allocator policy trained in the calibrated Fossen 30 s
+# Learn-to-Swim domain-randomized environment using the original
+# Isaac/WarpAUV-style dense reward (mode 2).
+base_config: ppo_wrench_for_pose_physical_wrench_allocator
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_dr_physical_allocator
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, physical_wrench_allocator, fossen6dof, learn_to_swim, domain_randomization, parallel_1024, 30s]
+  output_dir: artifacts/runs/rl/hold_for_position/physical_wrench_allocator/ppo_wrench_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_dr
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_30s_10Hz_Server/HoldForPosition_Parallel_30s.x86_64
+    env_base_port: 65105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    parallel_mode: multi_area
+    seed: 42
+    environment_parameters:
+      # Mode 2: IsaacPositionHold. Position, attitude, and action-energy
+      # exponentials only; no FinsSim tracking/smoothness/hold additions.
+      finsim_hold.reward.mode: 2.0
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    # 64 * 1024 = 65,536 samples/update; 8 mini-batches per PPO epoch.
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    total_timesteps: 32768000
+    checkpoint_freq: 819200
+    eval_freq: 163840

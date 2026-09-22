@@ -1,0 +1,22 @@
+base_config: chasing_3_chase_1_traditional_pose_controller
+
+experiment:
+  name: chasing_traditional_pose_60hz_token_attention
+  seed: 42
+  tags:
+    - traditional-pid
+    - control-hz
+    - 60hz
+    - token-attention
+
+unity:
+  env_base_port: 4610
+
+trainer:
+  backend: marl
+  overrides:
+    critic_variant: token_attention
+    critic_attention_heads: 4
+    overwrite: true
+    enable_yaw_control: true
+    body_pid_control_rate_hz: 60.0

@@ -1,0 +1,1532 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build/ros2-all",
+            "type": "process",
+            "command": "./scripts/colcon_build_uv.sh",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "build",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build/ros2-clean-cache",
+            "type": "process",
+            "command": "./scripts/colcon_build_uv.sh",
+            "args": [
+                "--cmake-clean-cache"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "group": "build",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build/ros2-package",
+            "type": "process",
+            "command": "./scripts/colcon_build_uv.sh",
+            "args": [
+                "--packages-select",
+                "${input:ros2Package}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "group": "build",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build/ros2-hardware-bridge",
+            "type": "process",
+            "command": "./scripts/colcon_build_uv.sh",
+            "args": [
+                "--packages-select",
+                "hardware_bridge"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "group": "build",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build/ros2-perception-fusion-control",
+            "type": "process",
+            "command": "./scripts/colcon_build_uv.sh",
+            "args": [
+                "--packages-select",
+                "perception",
+                "state_estimation",
+                "motion_control"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "group": "build",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build/ros2-data-tools",
+            "type": "process",
+            "command": "./scripts/colcon_build_uv.sh",
+            "args": [
+                "--packages-up-to",
+                "trajectory_data",
+                "experiment_recorder"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "group": "build",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "Start All (with debug)",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "_start/hardware-bridge-debug-enabled",
+                "_start/hardware-debug-monitor",
+                "_terminal/set-param",
+                "_start/perception-rgb",
+                "_start/perception-monitor",
+                "_start/fusion",
+                "_start/rqt",
+                "_start/controller-node",
+                "_terminal/goal",
+                "_terminal/action",
+                "_terminal/cancel"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Perception Only",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "_start/perception-rgb",
+                "_start/perception-monitor"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Hardware Debug Only",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "_start/hardware-bridge-debug-enabled",
+                "_start/hardware-debug-monitor",
+                "_terminal/set-param",
+                "_terminal/action",
+                "_terminal/cancel"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Control Only",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "_start/fusion",
+                "_start/controller-node",
+                "_terminal/goal",
+                "_terminal/action",
+                "_terminal/cancel"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "_start/hardware-bridge-debug-enabled",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/hardware-bridge-debug-enabled'; echo '[task-ready] _start/hardware-bridge-debug-enabled'; exec ./scripts/run_ros2_uv.sh ros2 launch hardware_bridge hardware_bridge.launch.py params_file:=${input:hardwareParamsFile} debug_mask:=1 debug_echo_decimation:=1 enabled:=true"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/hardware-bridge-debug-enabled",
+                    "endsPattern": "^\\[task-ready\\] _start/hardware-bridge-debug-enabled"
+                }
+            },
+            "presentation": {
+                "group": "hardware",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_start/hardware-debug-monitor",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/hardware-debug-monitor'; echo '[task-ready] _start/hardware-debug-monitor'; exec ./scripts/run_ros2_uv.sh ros2 topic echo /finsrov/hardware/thruster_cmd_echo --full-length"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/hardware-debug-monitor",
+                    "endsPattern": "^\\[task-ready\\] _start/hardware-debug-monitor"
+                }
+            },
+            "presentation": {
+                "group": "hardware",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_start/perception-rgb",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/perception-rgb'; echo '[task-ready] _start/perception-rgb'; exec ./scripts/run_ros2_uv.sh ros2 launch perception refractive_apriltag.launch.py detector_params:=${input:apriltagRgbDetectorParams} refractive_params:=${input:apriltagRgbRefractiveParams}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/perception-rgb",
+                    "endsPattern": "^\\[task-ready\\] _start/perception-rgb"
+                }
+            },
+            "presentation": {
+                "group": "perception",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_start/perception-monitor",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/perception-monitor'; echo '[task-ready] _start/perception-monitor'; exec ./scripts/run_ros2_uv.sh ros2 run perception perception_monitor"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/perception-monitor",
+                    "endsPattern": "^\\[task-ready\\] _start/perception-monitor"
+                }
+            },
+            "presentation": {
+                "group": "perception",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_start/fusion",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/fusion'; echo '[task-ready] _start/fusion'; exec ./scripts/run_ros2_uv.sh ros2 launch state_estimation state_fusion.launch.py params_file:=${input:fusionParamsFile}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/fusion",
+                    "endsPattern": "^\\[task-ready\\] _start/fusion"
+                }
+            },
+            "presentation": {
+                "group": "fusion",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_start/rqt",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/rqt'; echo '[task-ready] _start/rqt'; exec ./scripts/run_ros2_uv.sh rqt"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/rqt",
+                    "endsPattern": "^\\[task-ready\\] _start/rqt"
+                }
+            },
+            "presentation": {
+                "group": "monitor",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_start/controller-node",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] _start/controller-node'; echo '[task-ready] _start/controller-node'; params_input='${input:controllerProfileFile}'; config_dir='src/motion_control/config/FinsROV'; if [ -z \"$params_input\" ]; then params_file=\"$config_dir/ppo_control_for_pose_dr.yaml\"; elif [ -f \"$params_input\" ]; then params_file=\"$params_input\"; elif [ -f \"$config_dir/$params_input\" ]; then params_file=\"$config_dir/$params_input\"; else echo \"[task-error] controller params file not found: $params_input\" >&2; echo \"[task-error] searched: $params_input and $config_dir/$params_input\" >&2; exit 1; fi; exec ./scripts/run_ros2_uv.sh ros2 launch motion_control motion_controller.launch.py params_file:=$params_file"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _start/controller-node",
+                    "endsPattern": "^\\[task-ready\\] _start/controller-node"
+                }
+            },
+            "presentation": {
+                "group": "controller",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_terminal/set-param",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "source ./scripts/source_ros2_uv.sh && echo '[task-start] _terminal/set-param' && echo '[task-ready] _terminal/set-param' && echo 'ROS2 set-param terminal: e.g. ros2 param set /hardware_bridge enabled true' && exec bash -i"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _terminal/set-param",
+                    "endsPattern": "^\\[task-ready\\] _terminal/set-param"
+                }
+            },
+            "presentation": {
+                "group": "set-param",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_terminal/goal",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "source ./scripts/source_ros2_uv.sh && echo '[task-start] _terminal/goal' && echo '[task-ready] _terminal/goal' && echo 'ROS2 goal terminal: e.g. ros2 run motion_control send_position_goal --frame controller_world --x 2.0 --y -0.3 --z 0.0' && exec bash -i"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _terminal/goal",
+                    "endsPattern": "^\\[task-ready\\] _terminal/goal"
+                }
+            },
+            "presentation": {
+                "group": "goal",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_terminal/action",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "source ./scripts/source_ros2_uv.sh && echo '[task-start] _terminal/action' && echo '[task-ready] _terminal/action' && echo 'ROS2 action terminal: ready for manual commands.' && exec bash -i"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _terminal/action",
+                    "endsPattern": "^\\[task-ready\\] _terminal/action"
+                }
+            },
+            "presentation": {
+                "group": "action",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "_terminal/cancel",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "source ./scripts/source_ros2_uv.sh && echo '[task-start] _terminal/cancel' && echo '[task-ready] _terminal/cancel' && echo 'ROS2 cancel terminal: e.g. ros2 run motion_control cancel_goal; ros2 param set /hardware_bridge enabled false' && exec bash -i"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] _terminal/cancel",
+                    "endsPattern": "^\\[task-ready\\] _terminal/cancel"
+                }
+            },
+            "presentation": {
+                "group": "cancel",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/reset-service",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] run/reset-service'; echo '[task-ready] run/reset-service'; exec ./scripts/run_ros2_uv.sh ros2 run motion_control reset_service --ros-args --params-file ./ros2_ws/src/motion_control/config/FinsROV/traditional_pid_position_yaw.yaml"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] run/reset-service",
+                    "endsPattern": "^\\[task-ready\\] run/reset-service"
+                }
+            },
+            "presentation": {
+                "group": "controller",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/grpc-ros-adapter-sim",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "echo '[task-start] run/grpc-ros-adapter-sim'; source ./scripts/source_ros2_uv.sh; echo '[task-ready] run/grpc-ros-adapter-sim'; exec ./scripts/launch_grpc_ros_adapter.sh topic_prefix:=/sim"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "task-ready",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[task-start\\] run/grpc-ros-adapter-sim",
+                    "endsPattern": "^\\[task-ready\\] run/grpc-ros-adapter-sim"
+                }
+            },
+            "presentation": {
+                "group": "simulation",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "reset/vehicle",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "motion_control",
+                "reset_vehicle"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "shared",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/hardware-bridge",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "launch",
+                "hardware_bridge",
+                "hardware_bridge.launch.py",
+                "params_file:=${input:hardwareParamsFile}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/hardware-bridge/debug-enabled",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "launch",
+                "hardware_bridge",
+                "hardware_bridge.launch.py",
+                "params_file:=${input:hardwareParamsFile}",
+                "debug_mask:=1",
+                "debug_echo_decimation:=1",
+                "enabled:=true"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "monitor/hardware-debug-monitor",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "topic",
+                "echo",
+                "/finsrov/hardware/thruster_cmd_echo",
+                "--full-length"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "param/hardware-debug-enable",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "param/hardware-debug-mask-on",
+                "param/hardware-debug-echo-every",
+                "param/hardware-enable"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "param/hardware-debug-mask-on",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "/hardware_bridge",
+                "debug_mask",
+                "1"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "param/hardware-debug-echo-every",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "/hardware_bridge",
+                "debug_echo_decimation",
+                "1"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "param/hardware-enable",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "/hardware_bridge",
+                "enabled",
+                "true"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "param/hardware-disable",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "/hardware_bridge",
+                "enabled",
+                "false"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "param/hardware-set-motor-order",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "/hardware_bridge",
+                "motor_order",
+                "${input:motorOrder}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "param/hardware-set-motor-signs",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "/hardware_bridge",
+                "motor_signs",
+                "${input:motorSigns}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "param/set-param",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "set",
+                "${input:paramNode}",
+                "${input:paramName}",
+                "${input:paramValue}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "param",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "param/get-param",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "param",
+                "get",
+                "${input:paramNode}",
+                "${input:paramName}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "param",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "run/rqt",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "rqt"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "monitor",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/perception/rgb",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "launch",
+                "perception",
+                "refractive_apriltag.launch.py",
+                "detector_params:=${input:apriltagRgbDetectorParams}",
+                "refractive_params:=${input:apriltagRgbRefractiveParams}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "perception",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/perception/ir",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "launch",
+                "perception",
+                "refractive_apriltag_ir.launch.py",
+                "detector_params:=${input:apriltagIrDetectorParams}",
+                "refractive_params:=${input:apriltagIrRefractiveParams}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "perception",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "monitor/perception-monitor",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "perception",
+                "perception_monitor"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "perception",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/fusion",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "launch",
+                "state_estimation",
+                "state_fusion.launch.py",
+                "params_file:=${input:fusionParamsFile}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "fusion",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "monitor/fusion-status",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "topic",
+                "echo",
+                "/finsrov/state/status"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "fusion",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/controller-node",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "params_input='${input:controllerParamsFile}'; config_dir='src/motion_control/config/FinsROV'; if [ -z \"$params_input\" ]; then params_file=\"$config_dir/ppo_control_for_pose_dr.yaml\"; elif [ -f \"$params_input\" ]; then params_file=\"$params_input\"; elif [ -f \"$config_dir/$params_input\" ]; then params_file=\"$config_dir/$params_input\"; else echo \"[task-error] controller params file not found: $params_input\" >&2; echo \"[task-error] searched: $params_input and $config_dir/$params_input\" >&2; exit 1; fi; exec ./scripts/run_ros2_uv.sh ros2 launch motion_control motion_controller.launch.py params_file:=$params_file"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/controller-node/trajectory-tracking-wrench6",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "exec ./scripts/run_ros2_uv.sh ros2 launch motion_control motion_controller.launch.py params_file:=src/motion_control/config/FinsROV/ppo_trajectory_tracking_wrench6.yaml"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/controller-node/trajectory-tracking-thruster8",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "exec ./scripts/run_ros2_uv.sh ros2 launch motion_control motion_controller.launch.py params_file:=src/motion_control/config/FinsROV/ppo_trajectory_tracking_thruster8.yaml"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/controller-node-profile",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": [
+                "-lc",
+                "params_input='${input:controllerProfileFile}'; config_dir='src/motion_control/config/FinsROV'; if [ -z \"$params_input\" ]; then params_file=\"$config_dir/ppo_control_for_pose_dr.yaml\"; elif [ -f \"$params_input\" ]; then params_file=\"$params_input\"; elif [ -f \"$config_dir/$params_input\" ]; then params_file=\"$config_dir/$params_input\"; else echo \"[task-error] controller params file not found: $params_input\" >&2; echo \"[task-error] searched: $params_input and $config_dir/$params_input\" >&2; exit 1; fi; exec ./scripts/run_ros2_uv.sh ros2 launch motion_control motion_controller.launch.py params_file:=$params_file"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "goal/set-position-controller-world",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "motion_control",
+                "send_position_goal",
+                "--frame",
+                "controller_world",
+                "--x",
+                "${input:goalX}",
+                "--y",
+                "${input:goalY}",
+                "--z",
+                "${input:goalZ}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "goal/set-position-controller-body",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "motion_control",
+                "send_position_goal",
+                "--frame",
+                "controller_body",
+                "--x",
+                "${input:bodyGoalX}",
+                "--y",
+                "${input:bodyGoalY}",
+                "--z",
+                "${input:bodyGoalZ}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "goal/set-position-controller-body-yaw",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "motion_control",
+                "send_position_goal",
+                "--frame",
+                "controller_body",
+                "--x",
+                "${input:bodyGoalX}",
+                "--y",
+                "${input:bodyGoalY}",
+                "--z",
+                "${input:bodyGoalZ}",
+                "--yaw",
+                "${input:goalYawDeg}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "goal/send-velocity-controller-body",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "motion_control",
+                "send_velocity_command",
+                "--frame",
+                "controller_body",
+                "--vx",
+                "${input:velocityX}",
+                "--vy",
+                "${input:velocityY}",
+                "--vz",
+                "${input:velocityZ}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "controller",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "cancel/cancel-goal",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "motion_control",
+                "cancel_goal"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "cancel",
+                "panel": "shared",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "cancel/hardware-disable",
+            "dependsOn": [
+                "param/hardware-disable"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "cancel/all-stop",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "cancel/cancel-goal",
+                "param/hardware-disable"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "test/hardware-thruster/forward-rate20",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "hardware_bridge",
+                "send_thruster_test",
+                "forward",
+                "--amplitude",
+                "0.2",
+                "--rate",
+                "20",
+                "--duration",
+                "3"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/trajectory-data/record-teleop",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "trajectory_data",
+                "record_teleop_trajectory",
+                "--session-id",
+                "${input:teleopTrajectorySessionId}",
+                "--label",
+                "${input:teleopTrajectoryLabel}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "data",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run/experiment-recorder/dry-run",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "experiment_recorder",
+                "record_experiment",
+                "--experiment-id",
+                "${input:experimentId}",
+                "--profile",
+                "${input:experimentProfile}",
+                "--session-id",
+                "${input:experimentSessionId}",
+                "--dry-run"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "data",
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "test/hardware-thruster",
+            "type": "process",
+            "command": "./scripts/run_ros2_uv.sh",
+            "args": [
+                "ros2",
+                "run",
+                "hardware_bridge",
+                "send_thruster_test",
+                "${input:thrusterTestMode}",
+                "--amplitude",
+                "${input:thrusterAmplitude}",
+                "--rate",
+                "${input:thrusterRate}",
+                "--duration",
+                "${input:thrusterDuration}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "group": "hardware",
+                "panel": "shared",
+                "reveal": "always"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "ros2Package",
+            "type": "pickString",
+            "description": "ROS2 package to build",
+            "default": "hardware_bridge",
+            "options": [
+                "hardware_bridge",
+                "perception",
+                "state_estimation",
+                "motion_control",
+                "trajectory_data",
+                "experiment_recorder",
+                "thruster_bridge",
+                "grpc_ros_adapter",
+                "uuv_sensor_msgs"
+            ]
+        },
+        {
+            "id": "hardwareParamsFile",
+            "type": "pickString",
+            "description": "hardware_bridge params_file",
+            "default": "src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml",
+            "options": [
+                "src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml",
+                "src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro2.yaml",
+                "src/hardware_bridge/config/finsrov_hardware_bridge_nature_test.yaml"
+            ]
+        },
+        {
+            "id": "motorOrder",
+            "type": "promptString",
+            "description": "hardware_bridge motor_order",
+            "default": "[4, 5, 0, 1, 2, 7, 6, 3]"
+        },
+        {
+            "id": "motorSigns",
+            "type": "pickString",
+            "description": "hardware_bridge motor_signs",
+            "default": "[-1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0]",
+            "options": [
+                "[-1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0]",
+                "[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]"
+            ]
+        },
+        {
+            "id": "paramNode",
+            "type": "promptString",
+            "description": "ROS2 node name",
+            "default": "/hardware_bridge"
+        },
+        {
+            "id": "paramName",
+            "type": "promptString",
+            "description": "ROS2 parameter name",
+            "default": "enabled"
+        },
+        {
+            "id": "paramValue",
+            "type": "promptString",
+            "description": "ROS2 parameter value",
+            "default": "true"
+        },
+        {
+            "id": "apriltagRgbDetectorParams",
+            "type": "promptString",
+            "description": "RGB AprilTag detector params",
+            "default": "src/perception/config/direct_apriltag_rgb.yaml"
+        },
+        {
+            "id": "apriltagRgbRefractiveParams",
+            "type": "promptString",
+            "description": "RGB refractive AprilTag pose params",
+            "default": "src/perception/config/refractive_apriltag_rgb.yaml"
+        },
+        {
+            "id": "apriltagIrDetectorParams",
+            "type": "promptString",
+            "description": "IR AprilTag detector params",
+            "default": "src/perception/config/direct_apriltag_ir.yaml"
+        },
+        {
+            "id": "apriltagIrRefractiveParams",
+            "type": "promptString",
+            "description": "IR refractive AprilTag pose params",
+            "default": "src/perception/config/refractive_apriltag_ir.yaml"
+        },
+        {
+            "id": "fusionParamsFile",
+            "type": "promptString",
+            "description": "state_fusion params_file",
+            "default": "src/state_estimation/config/state_fusion.yaml"
+        },
+        {
+            "id": "controllerParamsFile",
+            "type": "promptString",
+            "description": "Custom motion_controller params_file path (basename under config/FinsROV or full path)",
+            "default": "ppo_control_for_pose_dr.yaml"
+        },
+        {
+            "id": "controllerProfileFile",
+            "type": "pickString",
+            "description": "Built-in motion_controller YAML profile",
+            "default": "src/motion_control/config/FinsROV/ppo_control_for_pose_dr.yaml",
+            "options": [
+                "src/motion_control/config/controller.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_moving_target_obs13.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_pose_dr_reprojected_physical_wrench_allocator.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_pose_nodr_reprojected_physical_wrench_allocator.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_pose.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_pose_dr.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_pose_sim.yaml",
+                "src/motion_control/config/FinsROV/ppo_isaaclab_finsrov_hold_for_position_direct_ppo.yaml",
+                "src/motion_control/config/FinsROV/ppo_isaaclab_finsrov_hold_for_position_reprojected_physical_wrench.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_isaaclab_finsrov_hold_for_position.yaml",
+                "src/motion_control/config/FinsROV/ppo_isaaclab_warpauv_poshold.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator_nodr.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator_sim.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_for_pose.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_for_pose_sim.yaml",
+                "src/motion_control/config/FinsROV/traditional_ff_velocity.yaml",
+                "src/motion_control/config/FinsROV/traditional_pid_ff_velocity.yaml",
+                "src/motion_control/config/FinsROV/traditional_pid_position.yaml",
+                "src/motion_control/config/FinsROV/traditional_pid_position_yaw.yaml",
+                "src/motion_control/config/FinsROV/traditional_pid_velocity.yaml",
+                "src/motion_control/config/FinsROV/ppo_isaaclab_finsrov_hold_for_position_reprojected_physical_wrench.yaml",
+                "src/motion_control/config/FinsROV/ppo_isaaclab_finsrov_hold_for_position_direct_ppo.yaml",
+                "src/motion_control/config/FinsROV/traditional_pid_trajectory_tracking.yaml",
+                "src/motion_control/config/FinsROV/ppo_control_for_pose_dr_reprojected_physical_wrench_allocator_maxforce.yaml",
+                "src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator_maxforce.yaml"
+            ]
+        },
+        {
+            "id": "goalX",
+            "type": "promptString",
+            "description": "World goal x",
+            "default": "2.0"
+        },
+        {
+            "id": "goalY",
+            "type": "promptString",
+            "description": "World goal y",
+            "default": "-2.0"
+        },
+        {
+            "id": "goalZ",
+            "type": "promptString",
+            "description": "World goal z",
+            "default": "0.0"
+        },
+        {
+            "id": "bodyGoalX",
+            "type": "promptString",
+            "description": "Body goal x",
+            "default": "0.2"
+        },
+        {
+            "id": "bodyGoalY",
+            "type": "promptString",
+            "description": "Body goal y",
+            "default": "-0.2"
+        },
+        {
+            "id": "bodyGoalZ",
+            "type": "promptString",
+            "description": "Body goal z",
+            "default": "0.2"
+        },
+        {
+            "id": "goalYawDeg",
+            "type": "promptString",
+            "description": "Body goal yaw in degrees",
+            "default": "90"
+        },
+        {
+            "id": "velocityX",
+            "type": "promptString",
+            "description": "Body velocity vx",
+            "default": "0.20"
+        },
+        {
+            "id": "velocityY",
+            "type": "promptString",
+            "description": "Body velocity vy",
+            "default": "0.0"
+        },
+        {
+            "id": "velocityZ",
+            "type": "promptString",
+            "description": "Body velocity vz",
+            "default": "0.0"
+        },
+        {
+            "id": "thrusterTestMode",
+            "type": "pickString",
+            "description": "send_thruster_test mode",
+            "default": "forward",
+            "options": [
+                "forward",
+                "backward",
+                "turn_left",
+                "turn_right",
+                "up",
+                "down"
+            ]
+        },
+        {
+            "id": "thrusterAmplitude",
+            "type": "promptString",
+            "description": "send_thruster_test amplitude",
+            "default": "0.2"
+        },
+        {
+            "id": "thrusterRate",
+            "type": "promptString",
+            "description": "send_thruster_test rate Hz",
+            "default": "20"
+        },
+        {
+            "id": "thrusterDuration",
+            "type": "promptString",
+            "description": "send_thruster_test duration seconds",
+            "default": "3"
+        },
+        {
+            "id": "teleopTrajectorySessionId",
+            "type": "promptString",
+            "description": "Trajectory session ID (output is under ros2_ws/data/teleop_trajectories)",
+            "default": "teleop_session_001"
+        },
+        {
+            "id": "teleopTrajectoryLabel",
+            "type": "promptString",
+            "description": "Trajectory session label",
+            "default": "free_drive"
+        },
+        {
+            "id": "experimentId",
+            "type": "pickString",
+            "description": "Experiment ID for a recorder dry-run",
+            "default": "E1",
+            "options": [
+                "E1",
+                "E2",
+                "E4",
+                "E5",
+                "E6",
+                "E7",
+                "E9",
+                "E10"
+            ]
+        },
+        {
+            "id": "experimentProfile",
+            "type": "pickString",
+            "description": "Recorder profile for a dry-run",
+            "default": "apriltag",
+            "options": [
+                "apriltag",
+                "t1",
+                "t2",
+                "t1_sim",
+                "t2_sim",
+                "full"
+            ]
+        },
+        {
+            "id": "experimentSessionId",
+            "type": "promptString",
+            "description": "Experiment session ID for a recorder dry-run",
+            "default": "dry_run_001"
+        }
+    ]
+}

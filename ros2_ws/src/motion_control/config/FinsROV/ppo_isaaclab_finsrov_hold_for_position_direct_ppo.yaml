@@ -1,0 +1,70 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    # FinsROV IsaacLab 16D observation / 8D direct-thruster RSL-RL backend.
+    backend_name: isaaclab_finsrov_hold_for_position
+    # This must be an RSL-RL checkpoint trained with action schema
+    # finsrov_calibrated_normalized_thrust_v2, not an SKRL checkpoint.
+    checkpoint_path: "${ISAACLAB_PATH}/logs/rsl_rl/finssim_finsrov_hold_for_position_yaw_16d_8d/2026-08-21_16-34-28_2026-08-21_16-34-25-9a8ecb11/model_999.pt"
+
+    device: cuda
+    control_rate_hz: 10.0
+    # Hardware safety ramp. Set to 0.0 only after validating that raw policy
+    # transitions are safe on the vehicle.
+    policy_action_rate_limit_per_sec: 0.75
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+
+    # ROS FLU/ENU -> controller xyz remap: controller = [ros.x, ros.z, ros.y].
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    # Exact trained action conversion, with no wrench projection or allocator:
+    # F_i = clip(a_i, -1, 1) * (Fmax_i+ when a_i >= 0 else Fmax_i-).
+    thruster_output_mode: isaaclab_finsrov_calibrated_thruster8_force_n
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    # Keep unity gains to preserve the training action-to-force contract.
+    thruster_output_scale: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    # V4 Pro1 command-limited per-thruster calibrated force limits [N].
+    # The bridge maps [-1, 1] to the same fitted RPM range; do not add another
+    # global output factor here.
+    thruster_force_limits_n:
+      positive: [8.474877, 8.797188, 8.797188, 8.474877, 8.797188, 8.474877, 8.797188, 8.474877]
+      negative: [7.974983, 8.272793, 8.272793, 7.974983, 8.272793, 7.974983, 8.272793, 7.974983]
+
+    odom_topic: ""
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

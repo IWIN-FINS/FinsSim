@@ -1,0 +1,50 @@
+# RGB overhead camera: E2-calibrated fixed-bottom-plane AprilTag-centre mapping.
+#
+# This maps the native direct_apriltag_node centre pixel to ROS pool_world x/y
+# only for the archived RGB camera geometry, tag bottom plane, and 1 m water
+# depth represented by the E2 source session below. It is a debug/diagnostic
+# 2-D mapping; refractive_apriltag_pose_node and state fusion do not consume it.
+# Do not use it for variable-depth localization or for the IR camera.
+schema_version: 1
+description: E2-calibrated fixed-bottom-plane AprilTag-center pixel-to-pool-world mapping.
+pixel_to_world_homography:
+  - 0.003636840174001827
+  - -8.580023482275187e-06
+  - -2.442421936807974
+  - -1.825811135627671e-05
+  - -0.0036760312233193623
+  - 1.3156132052678318
+  - 8.948736894459824e-06
+  - 0.00016105581071323904
+  - 1.0
+
+calibration_scope:
+  camera: finsrov_overhead_rgb_camera
+  image_size_px: [1280, 720]
+  output_frame: pool_world
+  plane: archived bottom AprilTag plane at 1 m water depth
+  valid_for: native direct_apriltag_node centre-pixel debug mapping only
+  not_valid_for: variable-depth localisation, refractive 6D pose, state fusion, or IR camera
+
+truth_reference:
+  annotation: AprilTag outer-lower-left grid point
+  grid_to_pool_world_offset_m: [-2.0, -1.0]
+  tag_center_offset_m: [0.06, 0.06]
+  tag_outer_side_m: 0.12
+  marker_length_m: 0.098
+
+provenance:
+  e2_session: ros2_ws/data/experiments/E2/20260828_002300_E2_AprilTag_NativeReplay
+  fit_report: ros2_ws/data/calibration/outputs/e2_pool_homography_20260828/fit_report.json
+  source_samples_sha256: 9c46bd8d7010ade3cb26c4f9f4e6feef55bba9e4ec28b379158dc6c1048b5b04
+  native_events_sha256: 07d20f89f25747c591b5d2b8f03315a3847bc583008b5da043db94abf21e261f
+  fitted_at: '2026-08-28T10:56:03+08:00'
+
+heldout_validation_m:
+  point_count: 34
+  rmse_m: 0.01585527496151433
+  mean_error_m: 0.014723303784891905
+  p95_error_m: 0.024427237686947687
+  max_error_m: 0.02507833798442525
+  bias_x_m: -0.0021663473635723136
+  bias_y_m: -0.000898059407006605

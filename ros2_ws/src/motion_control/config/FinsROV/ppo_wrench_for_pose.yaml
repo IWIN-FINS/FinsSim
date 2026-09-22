@@ -1,0 +1,105 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    # 6D wrench-policy checkpoints trained via ppo_wrench_for_pose_empirical_thruster_mixer /
+    # ppo_control_v2_for_pose. The runtime must use the raw 6D policy head,
+    # not PPOVirtualControlModel.predict(), which returns simulator 8D thrust.
+    backend_name: ppo_wrench_for_pose_empirical_thruster_mixer
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_dr_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_yaw_torque_dr_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_smooth_near_target_v2/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_v2_0809/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_fossen/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/wrench/ppo_wrench_for_pose_fossen_init/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_init/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_parallel_1024_15s_0815/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_parallel_1024_15s_init_0815/checkpoints/best_model.zip"
+    checkpoint_path: "./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_from_new_reward_to_100m/checkpoints/ppo_wrench_underwater_model_87687168_steps.zip"
+    
+    # backend_name and checkpoint_path belong to this controller profile.
+    # Select a different YAML profile instead of overriding either parameter.
+
+    device: cuda
+    control_rate_hz: 10.0
+    # Normalized policy action change limit for real deployment. At 10 Hz and
+    # 0.75, one step can change each policy output by at most 0.075.
+    policy_action_rate_limit_per_sec: 0.75
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    # ROS FLU/ENU -> controller xyz remap.
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    # Historical deployment path:
+    #   raw 6D policy action -> FinsROV allocator-body wrench
+    #   [Fx,Fy,Fz,Mx,My,Mz] = [forward,up,left,roll,yaw,pitch]
+    #   -> shared empirical_thruster_mixer -> 8 normalized thruster actions
+    #   -> force_n conversion -> hardware_bridge motor_order/motor_signs.
+    thruster_output_mode: wrench6d_force_n
+    thruster_output_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    # These are per-thruster force clamps used by the real allocator. They
+    # should stay consistent with hardware_bridge command_mode=force_n.
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+
+    # PPO action order: [surge, sway, heave, roll, pitch, yaw]. It maps to
+    # allocator body [Fx,Fy,Fz,Mx,My,Mz] = [forward,up,left,roll,yaw,pitch].
+    # Historical A-matrix checkpoint contract, not physical wrench units.
+    wrench6d:
+      allocation_mode: empirical_thruster_mixer
+      # Preserves the prior effective ratios: [1, 1, 1, 0, 0, 0.1].
+      action_gains: [1.0, 1.0, 1.0, 0.0, 0.0, 0.1]
+
+    odom_topic: ""
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+    debug_observation_topic: /motion_controller/debug/observation
+    debug_action_topic: /motion_controller/debug/action
+    debug_wrench6d_topic: /motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /motion_controller/debug/thruster_command
+    debug_policy_info_topic: /motion_controller/debug/policy_info
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0
+
+    stuck_recovery:
+      enabled: false

@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MARUS Unity + grpc_ros_adapter ROS2 User Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #5d6678;
+      --line: #d9dee8;
+      --accent: #1f6feb;
+      --accent-soft: #eaf2ff;
+      --ok: #197a44;
+      --warn: #9a5b00;
+      --code-bg: #111827;
+      --code-ink: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.62;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 48px 0 28px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 3vw, 3.2rem);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      margin: 0;
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0 0 24px;
+    }
+
+    nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 10px;
+      background: #fff;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.94rem;
+    }
+
+    main {
+      padding: 28px 0 56px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 0 0 18px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.45rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 22px 0 10px;
+      font-size: 1.08rem;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul,
+    ol {
+      margin: 10px 0 14px 22px;
+      padding: 0;
+    }
+
+    li {
+      margin: 5px 0;
+    }
+
+    code {
+      background: #eef1f6;
+      padding: 0.12em 0.34em;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 12px 0 18px;
+      padding: 16px;
+      overflow-x: auto;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 8px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f4f8;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+
+    .ok {
+      border-left-color: var(--ok);
+      background: #eaf8f0;
+    }
+
+    .warn {
+      border-left-color: var(--warn);
+      background: #fff7e6;
+    }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .node {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfe;
+      min-height: 110px;
+    }
+
+    .node strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    footer {
+      color: var(--muted);
+      padding: 0 0 32px;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 760px) {
+      .wrap {
+        width: min(100% - 24px, 1120px);
+      }
+
+      .hero {
+        padding: 34px 0 20px;
+      }
+
+      section {
+        padding: 18px;
+      }
+
+      .diagram {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <h1>MARUS Unity 与 ROS2 通信使用指南</h1>
+      <p class="subtitle">
+        本文说明如何使用 <code>grpc_ros_adapter</code> 在 ROS2 Humble 中启动 gRPC server，
+        让 MARUS Unity 项目通过现有 ROS 协议发布传感器数据，并接收 ROS2 侧的推进器控制指令。
+      </p>
+    </div>
+    <nav class="wrap" aria-label="目录">
+      <a href="#concept">通信模型</a>
+      <a href="#build">编译</a>
+      <a href="#run">启动</a>
+      <a href="#unity">Unity 配置</a>
+      <a href="#topics">Topic 映射</a>
+      <a href="#control">控制示例</a>
+      <a href="#sensors">传感器示例</a>
+      <a href="#troubleshooting">排错</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section id="concept">
+      <h2>1. 通信模型</h2>
+      <p>
+        MARUS 的 Unity 端不是直接连接 ROS2 topic。Unity 中的 <code>RosConnection</code>
+        会作为 gRPC client 连接外部进程；<code>grpc_ros_adapter</code> 则作为 ROS2 node
+        和 gRPC server，负责把 Unity 的 gRPC 消息转换成 ROS2 topic，或者把 ROS2 topic
+        转成 Unity 能理解的 gRPC 响应。
+      </p>
+
+      <div class="diagram" aria-label="通信链路图">
+        <div class="node">
+          <strong>Unity / MARUS</strong>
+          <span class="small">RosConnection, Sensor ROS wrappers, AUVRosController</span>
+        </div>
+        <div class="node">
+          <strong>grpc_ros_adapter</strong>
+          <span class="small">gRPC server, protobuf services, ROS2 publishers/subscribers</span>
+        </div>
+        <div class="node">
+          <strong>ROS2 系统</strong>
+          <span class="small">ros2 topic, controller nodes, RViz, logging, navigation stack</span>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>方向</th>
+            <th>Unity 侧</th>
+            <th>Adapter 侧</th>
+            <th>ROS2 侧</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>传感器</td>
+            <td>client-streaming gRPC 推送</td>
+            <td><code>SensorStreaming</code> service 接收并发布</td>
+            <td>订阅 sensor topic</td>
+          </tr>
+          <tr>
+            <td>推进器控制</td>
+            <td><code>AUVRosController</code> 订阅 gRPC stream</td>
+            <td><code>RemoteControl.ApplyForce</code> 从 ROS2 topic 读 PWM</td>
+            <td>发布 <code>Float32MultiArray</code></td>
+          </tr>
+          <tr>
+            <td>TF</td>
+            <td>发布或订阅 TF gRPC stream</td>
+            <td><code>FrameService</code></td>
+            <td><code>/tf</code> 相关 topic</td>
+          </tr>
+          <tr>
+            <td>参数</td>
+            <td>请求地理原点等参数</td>
+            <td><code>ParameterServer</code></td>
+            <td>ROS2 node parameters</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        默认 gRPC 地址是 <code>0.0.0.0:30052</code>。Unity 侧的
+        <code>RosConnection.serverIP</code> 和 <code>serverPort</code> 必须指向这个 adapter。
+      </div>
+    </section>
+
+    <section id="build">
+      <h2>2. 编译 ROS2 包</h2>
+      <p>ROS2 工作区路径：</p>
+      <pre><code></code></pre>
+
+      <h3>2.1 准备环境</h3>
+      <p>如果当前 shell 是 bash：</p>
+      <pre><code>cd "${MARUS_ROS2_ROOT}"
+source /opt/ros/humble/setup.bash</code></pre>
+
+      <p>如果当前 shell 是 zsh：</p>
+      <pre><code>cd "${MARUS_ROS2_ROOT}"
+source /opt/ros/humble/setup.zsh</code></pre>
+
+      <div class="warn">
+        不要在 zsh 里 source <code>setup.bash</code>。zsh 应该使用 <code>setup.zsh</code>。
+      </div>
+
+      <h3>2.2 安装系统 Python 依赖</h3>
+      <p>
+        推荐使用 ROS/Humble 对应的 apt 包，避免用户目录里的 pip 包污染 ROS 的 Python 环境。
+      </p>
+      <pre><code>sudo apt update
+sudo apt install python3-grpcio python3-protobuf python3-yaml python3-numpy python3-opencv</code></pre>
+
+      <h3>2.3 colcon build</h3>
+      <p>
+        当前已经整理成标准 ROS2 workspace：两个包都在 <code>src/</code> 下，
+        因此直接在工作区根目录编译即可。
+      </p>
+      <pre><code>cd "${MARUS_ROS2_ROOT}"
+rm -rf build install log
+colcon build</code></pre>
+
+      <p>看到下面类似输出即表示成功：</p>
+      <pre><code>Summary: 2 packages finished</code></pre>
+
+      <h3>2.4 source install</h3>
+      <p>bash：</p>
+      <pre><code>source /install/setup.bash</code></pre>
+
+      <p>zsh：</p>
+      <pre><code>source /install/setup.zsh</code></pre>
+
+      <h3>2.5 验证包可见</h3>
+      <pre><code>ros2 pkg prefix grpc_ros_adapter
+ros2 pkg prefix uuv_sensor_msgs
+ros2 pkg executables grpc_ros_adapter
+ros2 interface show uuv_sensor_msgs/msg/DVL</code></pre>
+    </section>
+
+    <section id="run">
+      <h2>3. 启动 grpc_ros_adapter</h2>
+
+      <h3>3.1 推荐启动方式</h3>
+      <p>
+        使用 <code>PYTHONNOUSERSITE=1</code> 可以避免 <code>~/.local</code> 里的 NumPy 2.x
+        干扰 ROS Humble 的 <code>cv_bridge</code>。
+      </p>
+
+      <p>bash：</p>
+      <pre><code>cd "${MARUS_ROS2_ROOT}"
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+PYTHONNOUSERSITE=1 ros2 launch grpc_ros_adapter ros2_server_launch.py</code></pre>
+
+      <p>zsh：</p>
+      <pre><code>cd "${MARUS_ROS2_ROOT}"
+source /opt/ros/humble/setup.zsh
+source install/setup.zsh
+PYTHONNOUSERSITE=1 ros2 launch grpc_ros_adapter ros2_server_launch.py</code></pre>
+
+      <h3>3.2 直接 ros2 run</h3>
+      <pre><code>PYTHONNOUSERSITE=1 ros2 run grpc_ros_adapter server</code></pre>
+
+      <p>正常启动时，终端会打印类似：</p>
+      <pre><code>creating
+[::]:30052</code></pre>
+
+      <div class="ok">
+        这表示 adapter 已经在 30052 端口等待 Unity 的 <code>RosConnection</code> 连接。
+      </div>
+    </section>
+
+    <section id="unity">
+      <h2>4. Unity / MARUS 场景配置</h2>
+
+      <h3>4.1 RosConnection</h3>
+      <p>场景中需要一个 <code>RosConnection</code> 组件，配置如下：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>字段</th>
+            <th>推荐值</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>serverIP</code></td>
+            <td><code>localhost</code> 或 adapter 主机 IP</td>
+            <td>Unity 和 adapter 同机时使用 <code>localhost</code></td>
+          </tr>
+          <tr>
+            <td><code>serverPort</code></td>
+            <td><code>30052</code></td>
+            <td>必须和 ROS2 launch 参数一致</td>
+          </tr>
+          <tr>
+            <td><code>RealtimeSimulation</code></td>
+            <td><code>true</code></td>
+            <td>实时仿真先保持默认即可</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 Vehicle 根节点</h3>
+      <p>要让地址自动匹配，车辆根节点需要：</p>
+      <ul>
+        <li>GameObject 名称稳定，例如 <code>BlueROV2</code></li>
+        <li>tag 设置为 <code>Vehicle</code></li>
+        <li>挂载 <code>ThrusterController</code></li>
+        <li>挂载 <code>AUVRosController</code></li>
+        <li><code>AUVRosController.thrusterController</code> 指向同车的 <code>ThrusterController</code></li>
+      </ul>
+
+      <p>
+        如果车辆名是 <code>BlueROV2</code>，Unity 的 <code>AUVRosController</code>
+        会订阅 gRPC 地址：
+      </p>
+      <pre><code>BlueROV2/pwm_out</code></pre>
+
+      <p>adapter 会把该地址转换为小写 ROS2 topic：</p>
+      <pre><code>/bluerov2/pwm_out</code></pre>
+
+      <h3>4.3 传感器</h3>
+      <p>
+        每个传感器通常需要“传感器本体组件 + 对应 ROS wrapper 组件”。例如：
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Unity 传感器本体</th>
+            <th>Unity ROS wrapper</th>
+            <th>ROS2 topic 示例</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ImuSensor</code></td>
+            <td><code>ImuROS</code></td>
+            <td><code>/bluerov2/imu_link</code></td>
+          </tr>
+          <tr>
+            <td><code>DepthSensor</code></td>
+            <td><code>DepthSensorROS</code></td>
+            <td><code>/bluerov2/depth_link</code></td>
+          </tr>
+          <tr>
+            <td><code>GnssSensor</code></td>
+            <td><code>GnssROS</code></td>
+            <td><code>/bluerov2/gnss_link</code></td>
+          </tr>
+          <tr>
+            <td><code>CameraSensor</code></td>
+            <td><code>CameraSensorROS</code></td>
+            <td><code>/bluerov2/front_camera</code></td>
+          </tr>
+          <tr>
+            <td><code>RaycastLidar</code></td>
+            <td><code>RaycastLidarPointCloud2ROS</code></td>
+            <td><code>/bluerov2/lidar_link</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="topics">
+      <h2>5. Topic 映射规则</h2>
+      <p>
+        MARUS wrapper 会发出一个 gRPC <code>address</code>。adapter 的规则很直接：
+      </p>
+      <ul>
+        <li>把地址转成小写</li>
+        <li>如果没有 <code>/</code> 前缀，就补成绝对 topic</li>
+        <li>按消息类型创建 ROS2 publisher 或 subscriber</li>
+      </ul>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Unity gRPC address</th>
+            <th>ROS2 topic</th>
+            <th>方向</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>BlueROV2/pwm_out</code></td>
+            <td><code>/bluerov2/pwm_out</code></td>
+            <td>ROS2 -> Unity</td>
+          </tr>
+          <tr>
+            <td><code>BlueROV2/imu_link</code></td>
+            <td><code>/bluerov2/imu_link</code></td>
+            <td>Unity -> ROS2</td>
+          </tr>
+          <tr>
+            <td><code>BlueROV2/front_camera</code></td>
+            <td><code>/bluerov2/front_camera</code></td>
+            <td>Unity -> ROS2</td>
+          </tr>
+          <tr>
+            <td><code>BlueROV2/front_camera/compressed</code></td>
+            <td><code>/bluerov2/front_camera/compressed</code></td>
+            <td>Unity -> ROS2</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="control">
+      <h2>6. ROS2 控制 Unity 推进器</h2>
+
+      <h3>6.1 发送一次 PWM</h3>
+      <p>
+        假设车辆名是 <code>BlueROV2</code>，并且 <code>ThrusterController.thrusters</code>
+        有 4 个推进器：
+      </p>
+      <pre><code>ros2 topic pub --once /bluerov2/pwm_out std_msgs/msg/Float32MultiArray \
+  "{data: [0.2, 0.2, 0.2, 0.2]}"</code></pre>
+
+      <h3>6.2 持续发布 PWM</h3>
+      <pre><code>ros2 topic pub -r 20 /bluerov2/pwm_out std_msgs/msg/Float32MultiArray \
+  "{data: [0.15, 0.15, 0.15, 0.15]}"</code></pre>
+
+      <div class="warn">
+        PWM 数组顺序必须和 Unity 中 <code>ThrusterController.thrusters</code> 列表顺序一致。
+        建议每次发布完整长度数组。
+      </div>
+
+      <h3>6.3 Python 控制节点最小例子</h3>
+      <pre><code>#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float32MultiArray
+
+
+class PwmController(Node):
+    def __init__(self):
+        super().__init__("marus_pwm_controller")
+        self.pub = self.create_publisher(Float32MultiArray, "/bluerov2/pwm_out", 10)
+        self.timer = self.create_timer(0.05, self.tick)
+
+    def tick(self):
+        msg = Float32MultiArray()
+        msg.data = [0.15, 0.15, 0.15, 0.15]
+        self.pub.publish(msg)
+
+
+def main():
+    rclpy.init()
+    node = PwmController()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()</code></pre>
+    </section>
+
+    <section id="sensors">
+      <h2>7. 查看 Unity 传感器数据</h2>
+
+      <h3>7.1 查看 topic 列表</h3>
+      <pre><code>ros2 topic list</code></pre>
+
+      <h3>7.2 查看 IMU</h3>
+      <pre><code>ros2 topic echo /bluerov2/imu_link</code></pre>
+
+      <h3>7.3 查看深度</h3>
+      <pre><code>ros2 topic echo /bluerov2/depth_link</code></pre>
+
+      <h3>7.4 查看图像</h3>
+      <p>普通图像：</p>
+      <pre><code>ros2 topic info /bluerov2/front_camera
+ros2 topic hz /bluerov2/front_camera</code></pre>
+
+      <p>压缩图像：</p>
+      <pre><code>ros2 topic info /bluerov2/front_camera/compressed</code></pre>
+
+      <h3>7.5 查看点云</h3>
+      <pre><code>ros2 topic info /bluerov2/lidar_link
+ros2 topic hz /bluerov2/lidar_link</code></pre>
+
+      <div class="callout">
+        具体 topic 名由 Unity 中 Vehicle 名和传感器 GameObject 名决定。若不确定，
+        先运行 <code>ros2 topic list</code>，再按车辆名和传感器名查找。
+      </div>
+    </section>
+
+    <section id="workflow">
+      <h2>8. 推荐操作顺序</h2>
+      <ol>
+        <li>启动 ROS2 环境并 source adapter install。</li>
+        <li>运行 <code>PYTHONNOUSERSITE=1 ros2 launch grpc_ros_adapter ros2_server_launch.py</code>。</li>
+        <li>打开 Unity 场景，确认 <code>RosConnection</code> 指向 <code>localhost:30052</code>。</li>
+        <li>进入 Play 模式，观察 adapter 终端是否保持运行。</li>
+        <li>运行 <code>ros2 topic list</code>，确认 Unity 传感器 topic 出现。</li>
+        <li>发布 <code>/bluerov2/pwm_out</code>，确认 Unity 车辆推进器响应。</li>
+      </ol>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>9. 常见问题</h2>
+
+      <h3>9.1 source setup.bash 报 setup.sh 不存在</h3>
+      <p>
+        你可能在 zsh 里 source 了 bash 脚本。zsh 使用：
+      </p>
+      <pre><code>source /opt/ros/humble/setup.zsh
+source install/setup.zsh</code></pre>
+
+      <h3>9.2 cv_bridge / NumPy 报 <code>_ARRAY_API not found</code></h3>
+      <p>
+        这是用户目录里的 NumPy 2.x 干扰了 ROS Humble 的 apt 版 <code>cv_bridge</code>。
+        启动 adapter 时加：
+      </p>
+      <pre><code>PYTHONNOUSERSITE=1 ros2 launch grpc_ros_adapter ros2_server_launch.py</code></pre>
+
+      <h3>9.3 Unity 连接不上 ROS Server</h3>
+      <ul>
+        <li>确认 adapter 终端打印 <code>[::]:30052</code>。</li>
+        <li>确认 Unity <code>RosConnection.serverPort</code> 是 <code>30052</code>。</li>
+        <li>同机运行时 <code>serverIP</code> 用 <code>localhost</code>。</li>
+        <li>跨机器运行时，确认防火墙允许 TCP 30052。</li>
+      </ul>
+
+      <h3>9.4 发布 PWM 后 Unity 没反应</h3>
+      <ul>
+        <li>确认 Vehicle GameObject 名是否真的是 <code>BlueROV2</code>。</li>
+        <li>确认 ROS2 topic 使用小写：<code>/bluerov2/pwm_out</code>。</li>
+        <li>确认车辆根节点 tag 是 <code>Vehicle</code>。</li>
+        <li>确认 <code>AUVRosController.thrusterController</code> 已绑定。</li>
+        <li>确认 PWM 数组长度和推进器数量匹配。</li>
+      </ul>
+
+      <h3>9.5 colcon 找不到 uuv_sensor_msgs</h3>
+      <p>
+        在标准工作区中，<code>uuv_sensor_msgs</code> 应位于 <code>src/uuv_sensor_msgs</code>。
+        先确认包可见，再从工作区根目录编译：
+      </p>
+      <pre><code>cd "${MARUS_ROS2_ROOT}"
+colcon list
+colcon build</code></pre>
+
+      <h3>9.6 端口被占用</h3>
+      <pre><code>ss -ltnp | grep 30052</code></pre>
+      <p>
+        如果已有 adapter 实例在运行，先停止旧进程，或者修改
+        <code>launch/ros2_server_launch.py</code> 中的 <code>server_port</code> 并同步修改 Unity。
+      </p>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p>
+      File: <code>docs/marus_unity_ros2_userguide.html</code>.
+      适用环境：ROS2 Humble, MARUS Unity, grpc_ros_adapter gRPC server.
+    </p>
+  </footer>
+</body>
+</html>

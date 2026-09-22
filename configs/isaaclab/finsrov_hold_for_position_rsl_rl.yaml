@@ -1,0 +1,30 @@
+experiment:
+  name: finsrov_hold_for_position_rsl_rl
+  seed: 42
+  tags: [isaaclab, finsrov, hold_for_position, rsl_rl]
+  output_dir: null
+
+isaaclab:
+  path: ${ISAACLAB_PATH}
+  task: FinsSim-FinsROV-HoldForPosition-v0
+  rl_library: rsl_rl
+  cuda_visible_devices: "1"
+  device: cuda:0
+  num_envs: 2048
+  max_iterations: 1000
+  headless: true
+  video: false
+  hydra_overrides: []
+
+train:
+  # RSL-RL: this is a native full resume checkpoint below logs/rsl_rl/.
+  resume_checkpoint: null
+
+play:
+  # Set to the RSL-RL model_*.pt to replay.
+  #checkpoint: "${ISAACLAB_PATH}/logs/rsl_rl/finssim_finsrov_hold_for_position_yaw_16d_8d/2026-08-20_22-55-42/model_400.pt"
+  checkpoint: "${ISAACLAB_PATH}/logs/rsl_rl/finssim_finsrov_hold_for_position_yaw_16d_8d/2026-08-21_16-34-28_2026-08-21_16-34-25-9a8ecb11/model_999.pt"
+  num_envs: 1
+  headless: false
+  real_time: true
+  video: false

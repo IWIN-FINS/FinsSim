@@ -1,0 +1,10 @@
+T_world_tag:
+  2:
+    translation_xyz: [0.50, 0.20, 0.00]
+    rotation_rpy_deg: [0.0, 0.0, 0.0]
+  3:
+    translation_xyz: [1.20, 0.20, 0.00]
+    rotation_rpy_deg: [0.0, 0.0, 0.0]
+  4:
+    translation_xyz: [0.50, 0.90, 0.00]
+    rotation_rpy_deg: [0.0, 0.0, 0.0]

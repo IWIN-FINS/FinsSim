@@ -1,0 +1,22 @@
+task_config: task_v1.yaml
+action_contract: thruster8_v1
+pid_expert_config: pid_expert_sim.yaml
+
+env:
+  unity:
+    env_path: ../../../artifacts/unity_builds/irl/linux/GoalYawIRL_Fossen_10Hz_Server/GoalYawIRL.x86_64
+    env_base_port: 26105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 180
+    parallel_mode: multi_binary
+    environment_parameters:
+      # Cycle through 3 distance × 4 initial-yaw-error × 2 vertical strata.
+      goal_yaw_stratified_resets: 1.0
+  train:
+    num_envs: 1
+    time_scale: 5.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    num_episodes: 20

@@ -1,0 +1,27 @@
+# One-environment integration smoke for the FinsSim IsaacLab CLI.
+experiment:
+  name: finsrov_hold_for_position_skrl_smoke
+  seed: 42
+  tags: [isaaclab, finsrov, hold_for_position, skrl, smoke]
+
+isaaclab:
+  path: ${ISAACLAB_PATH}
+  task: FinsSim-FinsROV-HoldForPosition-v0
+  rl_library: skrl
+  cuda_visible_devices: "1"
+  device: cuda:0
+  num_envs: 1
+  max_iterations: 1
+  headless: true
+  video: false
+  hydra_overrides: []
+
+train:
+  resume_checkpoint: null
+
+play:
+  checkpoint: null
+  num_envs: 1
+  headless: true
+  real_time: false
+  video: false

@@ -1,0 +1,39 @@
+direct_apriltag_node:
+  ros__parameters:
+    device: /dev/v4l/by-id/usb-DSJ_USB_Camera_200901010001-video-index0
+    width: 1280
+    height: 720
+    fps: 30.0
+    fourcc: MJPG
+
+    family: tag25h9
+    # 实机真值验证专用：
+    # 17 是鱼目标板，15/16 是潜器 body tag。
+    # 这三个 id 都必须进入 pnp_array，fish_truth_left_camera 才能工作。
+    target_tag_ids: [17, 15, 16]
+    max_hamming: 0
+    nthreads: 10
+    quad_decimate: 1.5
+    quad_sigma: 0.0
+    refine_edges: true
+    decode_sharpening: 0.25
+
+    homography_file: calibration/pool_homography.yaml
+    camera_calibration_file: calibration/rgb_camera.yaml
+    marker_length_m: 0.093
+    publish_pnp_pose: true
+    pnp_pose_topic: /finsrov/vision/pose_3d_camera
+    pnp_array_topic: /finsrov/vision/tag_poses_3d_camera
+    detection2d_topic: /finsrov/vision/tag_detections_2d
+    pnp_frame_id: finsrov_overhead_camera
+    pnp_covariance_xyz: 0.0025
+
+    status_topic: /finsrov/vision/status
+    camera_status_topic: /finsrov/camera/status
+    debug_image_topic: /finsrov/camera/debug/compressed
+
+    debug_image_enabled: true
+    debug_image_rate_hz: 5.0
+    debug_image_width: 640
+    debug_jpeg_quality: 80
+    status_rate_hz: 5.0

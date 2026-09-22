@@ -1,0 +1,49 @@
+# Long continuation branch from the completed new-reward policy.
+# The source checkpoint has 16,384,000 transitions. With 1,024 environments
+# and n_steps=64, the additional 1,276 rollouts below end at 100,007,936
+# cumulative transitions, approximately 100M.
+base_config: ppo_wrench_for_pose_empirical_thruster_mixer
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_from_new_reward_to_100m
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, fossen6dof, dr_15s, learn_to_swim_dense, continuation, cosine_warm_restart, 100m]
+  output_dir: artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_from_new_reward_to_100m
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_15s_10Hz_Server/HoldForPosition_Parallel_15s.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 47105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    environment_parameters:
+      finsim_hold.reward.mode: 1.0
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    init_checkpoint: ./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_new_reward/checkpoints/final_model.zip
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    # 1,276 PPO rollouts x 1,024 areas x 64 steps = 83,623,936 new transitions.
+    total_timesteps: 83623936
+    # Evaluate each 1% and save each 5% of this continuation invocation.
+    eval_freq: 819200
+    checkpoint_freq: 4194304
+    # Four equal 20.9M-transition cosine cycles over the continuation branch.
+    learning_rate_schedule: cosine_warm_restarts
+    learning_rate_peak: 0.0001
+    learning_rate_min: 0.00001
+    learning_rate_warm_restart_cycles: 4

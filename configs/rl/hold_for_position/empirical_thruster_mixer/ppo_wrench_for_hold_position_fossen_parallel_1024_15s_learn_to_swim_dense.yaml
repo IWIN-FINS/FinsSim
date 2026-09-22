@@ -1,0 +1,62 @@
+# 15 s / 1024-area HoldForPosition Fossen run with a Learning to Swim inspired
+# goal-hold reward: exponential shaping plus absolute tracking, action
+# smoothness, near-goal angular damping, and a stable-hold bonus.
+# The reward mode is passed to Unity through EnvironmentParametersChannel.
+base_config: ppo_wrench_for_pose_empirical_thruster_mixer
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_parallel_1024_15s_learn_to_swim_dense
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, fossen6dof, training_area_replicator, dr_15s, learn_to_swim_dense]
+  output_dir: artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_2
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_15s_10Hz_Server/HoldForPosition_Parallel_15s.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 47105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    environment_parameters:
+      # HoldForPosition.DenseRewardMode.LearnToSwimGoalHold
+      finsim_hold.reward.mode: 1.0
+      # finsim_hold.reward.position_scale: 0.2
+      # finsim_hold.reward.position_error_exponent: 1.0
+      # finsim_hold.reward.attitude_scale: 0.5
+      # finsim_hold.reward.attitude_error_exponent: 1.0
+      # finsim_hold.reward.action_scale: 0.2
+      # finsim_hold.reward.action_energy_exponent: 1.0
+      # # Direct penalties remove static position/attitude error and action chatter.
+      # finsim_hold.reward.distance_penalty_scale: 0.15
+      # finsim_hold.reward.attitude_penalty_scale: 0.05
+      # finsim_hold.reward.action_delta_penalty_scale: 0.02
+      # # Only close to the target, suppress residual yaw/roll/pitch oscillation.
+      # finsim_hold.reward.near_goal_radius: 0.75
+      # finsim_hold.reward.near_goal_angular_velocity_penalty_scale: 0.03
+      # finsim_hold.reward.near_goal_angular_velocity_penalty_max_radps: 5.0
+      # # Reward truly stable residence at the requested position and attitude.
+      # finsim_hold.reward.hold_position_threshold: 0.20
+      # finsim_hold.reward.hold_attitude_threshold_deg: 10.0
+      # finsim_hold.reward.hold_angular_velocity_threshold_radps: 0.25
+      # finsim_hold.reward.hold_reward_scale: 0.10
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    total_timesteps: 16384000
+    # 16,384,000 total transitions: evaluate each 1% and retain a checkpoint each 5%.
+    checkpoint_freq: 819200
+    eval_freq: 163840

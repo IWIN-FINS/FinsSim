@@ -1,0 +1,39 @@
+# Two-area launch smoke test. Production training uses the non-smoke profile.
+base_config: ppo_control_for_pose
+
+experiment:
+  name: ppo_trajectory_tracking_fossen_parallel_30s_8thruster_smoke
+  seed: 42
+  tags: [smoke, trajectory_tracking, t2, direct_thruster8]
+  output_dir: artifacts/runs/rl/trajectory_tracking/smoke/8thruster
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/TrajectoryTracking_Fossen_Parallel_30s_Server/TrajectoryTracking.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 34105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    environment_parameters:
+      finsim_trajectory_curriculum_stage: 0
+  train:
+    num_envs: 2
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    overwrite: true
+    n_steps: 64
+    batch_size: 128
+    n_epochs: 1
+    total_timesteps: 128
+    checkpoint_freq: 128
+    eval_freq: 256

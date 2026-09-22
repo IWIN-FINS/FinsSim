@@ -1,0 +1,76 @@
+motion_controller:
+  ros__parameters:
+    # T2 translation-only PID baseline.  It samples the runtime trajectory
+    # position at every 60 Hz control tick; no learned checkpoint and no
+    # trajectory-velocity feedforward term are used.
+    vehicle_name: FinsROV
+    backend_name: traditional_pid_position
+    checkpoint_path: ""
+    device: auto
+    control_rate_hz: 60.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    # A T2 trajectory transports identity orientation only as a ROS message
+    # requirement.  It must not become a yaw=0 command.  This profile disables
+    # both controller-level target orientation and the PID yaw loop.
+    use_target_orientation: false
+    require_target_orientation: false
+    traditional_enable_yaw_control: false
+    traditional_yaw_pid_params: [0.0, 0.0, 0.0]
+    stop_on_goal_reached: false
+    position_tolerance: 0.05
+    orientation_tolerance_deg: 5.0
+    velocity_tolerance: 0.05
+
+    # pool_world -> controller_world basis: controller=[pool.x,pool.z,pool.y]
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_trajectory_topic: /motion_controller/command/trajectory
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+
+    # The recorder requires the runtime sampled reference, not the original
+    # sent CSV, for reference-versus-state analysis.
+    debug_trajectory_reference_topic: /motion_controller/debug/trajectory_reference
+    debug_action_topic: /motion_controller/debug/policy_action
+    debug_thruster_command_topic: /motion_controller/debug/thruster_command
+
+    # Canonical force command contract:
+    # [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    thruster_output_mode: force_n
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+
+    # Candidate gains inherited from the existing real-hardware position PID.
+    # PID order is [depth, surge, sway] x [Kp, Ki, Kd].  Treat this as a
+    # pre-registered baseline: tune only after a dry-run and low-authority
+    # pilot, then freeze the resolved YAML in the trial manifest.
+    traditional_pid_params: [12.0, 0.0, 1.0, 20.0, 0.1, 0.8, 20.0, 0.1, 0.8]
+    traditional_integral_decay: 0.985
+    traditional_allocator_control_linear_range: 10.0
+    traditional_allocator_control_axis_ranges: [20.0, 20.0, 20.0, 200.0, 200.0, 200.0]
+    traditional_allocator_allocation_mode: empirical_thruster_mixer

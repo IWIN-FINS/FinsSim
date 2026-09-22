@@ -1,0 +1,7 @@
+<launch>
+    <include file="$(find grpc_ros_adapter)/launch/launch_server.launch" />
+    <include file="$(find d2)/launch/d2.launch">
+      <arg name="runtime" value="false" />
+    </include>
+    <node ns="d2" name="rqt" pkg="rqt_gui" type="rqt_gui" />
+</launch>

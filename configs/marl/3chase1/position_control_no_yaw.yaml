@@ -1,0 +1,16 @@
+base_config: chasing_3_chase_1_position_control
+
+experiment:
+  name: chasing_position_control_no_yaw
+  seed: 42
+  tags:
+    - no-yaw
+
+unity:
+  env_base_port: 9000
+
+trainer:
+  backend: marl
+  overrides:
+    overwrite: true
+    enable_yaw_control: false

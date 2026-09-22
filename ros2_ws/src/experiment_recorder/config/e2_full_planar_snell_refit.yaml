@@ -1,0 +1,49 @@
+schema_version: 1
+description: >-
+  E2 full-dataset planar-Snell camera-extrinsic refit. All archived positions
+  participate in calibration; this produces a deployment candidate and is not
+  an independent localization-accuracy evaluation.
+
+experiment:
+  id: E2-FULL-PLANAR-SNELL-REFIT
+  profile: e2_full_planar_snell_refit
+  output_root: ros2_ws/data/calibration/t_world_camera/e2_full_planar_snell_refit
+
+source:
+  dataset_root: ${FINSSIM_DATASET_ROOT}/artifacts/datasets/apriltag_pnp_truth
+  session_id: "20260701_190100"
+  camera_calibration_file: ros2_ws/src/perception/calibration/rgb_camera.yaml
+
+# ``fit_from_dataset`` invokes the archived planar-Snell optimizer. Its raw
+# output uses the dataset's outer-border grid frame; deployment conversion to
+# the current pool_world tag-centre frame is an explicit, audited next step.
+extrinsics:
+  mode: fit_from_dataset
+  file: ros2_ws/src/state_estimation/config/state_fusion_extrinsics.yaml
+
+detector:
+  family: tag25h9
+  target_tag_id: 1
+  marker_length_m: 0.098
+  subpixel_refinement: true
+
+geometry:
+  water_surface_z_m: 1.0
+  target_plane_z_m: 0.0
+  n_air: 1.0003
+  n_water: 1.333
+  oracle_depth_m: 1.0
+  oracle_roll_pitch_rad: [0.0, 0.0]
+  extrinsic_refinement_max_iterations: 30
+
+evaluation:
+  evaluated_dimensions: [pool_world_x, pool_world_y]
+  excluded_dimensions: [depth, roll, pitch, yaw, ekf_fusion]
+  statistical_unit: truth_position_mean
+  # The input grid annotations are outer-border lower-left coordinates.
+  grid_origin_xy_m: [0.2, 0.2]
+  grid_step_m: 0.2
+  # Both residues cover every grid point: this is deliberately an all-point
+  # calibration pass, not a train/test split.
+  spatial_split_modulus: 2
+  calibration_remainders: [0, 1]

@@ -1,0 +1,40 @@
+# FinsROV body-frame thruster geometry.
+#
+# Position units: metres. Direction is the force direction produced by a
+# positive force_N command in the Unity body frame x-forward, y-up, z-left.
+# The order must match the hardware and ROS canonical order:
+# [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+#
+# Verify these values against the active prefab/scene before using the result
+# for deployment. The reference_point is the point about which torque is
+# calculated. Set it to the Rigidbody center of mass for the final model.
+
+# FinsROV_Fossen.prefab Rigidbody.centerOfMass in body coordinates.  The
+# forward model must use the same point as Unity AddForceAtPosition torque.
+reference_point: [0.0, -0.08, 0.0]
+
+thrusters:
+  - name: V_LF
+    position: [0.08312216, -0.030930428, 0.13304673]
+    direction: [0.0, 1.0, 0.0]
+  - name: V_LB
+    position: [-0.13687684, -0.030930420, 0.13304667]
+    direction: [0.0, 1.0, 0.0]
+  - name: V_RB
+    position: [-0.13687672, -0.030930437, -0.14295308]
+    direction: [0.0, 1.0, 0.0]
+  - name: V_RF
+    position: [0.08312222, -0.030930420, -0.14295302]
+    direction: [0.0, 1.0, 0.0]
+  - name: H_LF
+    position: [0.19834375, -0.042830437, 0.12746146]
+    direction: [1.0, 0.0, -1.0]
+  - name: H_LB
+    position: [-0.23286586, -0.042830452, 0.14669480]
+    direction: [1.0, 0.0, 1.0]
+  - name: H_RB
+    position: [-0.23286586, -0.042830437, -0.15660119]
+    direction: [-1.0, 0.0, 1.0]
+  - name: H_RF
+    position: [0.19834371, -0.042830423, -0.13736765]
+    direction: [-1.0, 0.0, -1.0]

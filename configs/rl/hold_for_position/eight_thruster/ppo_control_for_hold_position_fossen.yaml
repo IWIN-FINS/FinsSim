@@ -1,0 +1,39 @@
+base_config: ppo_control_for_pose
+
+# Isaac-style HoldForPosition warm-start from the fully trained Fossen
+# eight-thruster policy. This is a new run because the reward and hold task
+# are different from the source position-reaching task.
+experiment:
+  name: ppo_control_for_hold_position_fossen_10Hz
+  seed: 42
+  tags:
+    - ppo
+    - hold_for_position
+    - eight_thruster
+    - rot6d
+    - observation16
+    - fossen6dof
+  output_dir: artifacts/runs/rl/hold_for_position/eight_thruster/ppo_control_for_hold_position_fossen
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_10Hz_Server/ControlForPosition.x86_64
+    env_base_port: 32105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 300
+    parallel_mode: multi_binary
+
+  train:
+    num_envs: 32
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 10.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    # Additional steps beyond the loaded checkpoint's timestep counter.
+    total_timesteps: 5000000

@@ -1,0 +1,33 @@
+# Interactive Unity Editor replay for the 8-thruster equivalent-box checkpoint.
+# Start this evaluator with --use-editor, then press Play in the Unity scene.
+base_config: ppo_control_for_pose
+
+experiment:
+  name: ppo_hold_for_position_equivalent_box_parallel_1024_30s_editor_eval
+  seed: 42
+  tags: [eval, hold_for_position, eight_thruster, learning_to_swim_equivalent_box, editor]
+  output_dir: artifacts/evals/rl/hold_for_position/eight_thruster/ppo_hold_for_position_equivalent_box_parallel_1024_30s_editor
+
+env:
+  unity:
+    # Ignored with --use-editor; it documents the matching standalone Player.
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_LearningToSwimEquivalentBox_Parallel_1024_30s_8Thruster_Server/HoldForPosition_EquivalentBox_8Thruster.x86_64
+    env_base_port: 5004
+    port_offset: 0
+    no_graphics: false
+    parallel_mode: multi_area
+    seed: 42
+    environment_parameters:
+      finsim_hold.reward.mode: 1.0
+      finsim_hold.reward.near_goal_action_energy_penalty_scale: 0.60
+  eval:
+    num_envs: 1
+    num_episodes: 1000000
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    checkpoint_path: ./artifacts/runs/rl/hold_for_position/eight_thruster/ppo_hold_for_position_equivalent_box_parallel_1024_30s/checkpoints/best_model.zip

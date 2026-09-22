@@ -1,0 +1,47 @@
+# Continuation branch for the new-reward HoldForPosition Fossen policy.
+# Keep task, reward, DR, and PPO batch geometry fixed; only restart the
+# learning-rate annealing from the completed checkpoint.
+base_config: ppo_wrench_for_pose_empirical_thruster_mixer
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_cosine_warm_restart
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, fossen6dof, dr_15s, learn_to_swim_dense, cosine_warm_restart]
+  output_dir: artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_cosine_warm_restart
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_15s_10Hz_Server/HoldForPosition_Parallel_15s.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 47105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    environment_parameters:
+      finsim_hold.reward.mode: 1.0
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    init_checkpoint: ./artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_15s_learn_to_swim_dense_new_reward/checkpoints/final_model.zip
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    # 50 PPO rollouts with 1024 areas x 64 steps each.
+    total_timesteps: 3276800
+    checkpoint_freq: 819200
+    eval_freq: 163840
+    # Two cosine cycles across this additional training invocation.
+    learning_rate_schedule: cosine_warm_restarts
+    learning_rate_peak: 0.0001
+    learning_rate_min: 0.00001
+    learning_rate_warm_restart_cycles: 2

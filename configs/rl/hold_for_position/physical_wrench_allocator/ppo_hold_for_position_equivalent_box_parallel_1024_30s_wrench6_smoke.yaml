@@ -1,0 +1,40 @@
+# Minimal two-area launch/training test using the shared production 8-thruster Player.
+base_config: ppo_wrench_for_pose_physical_wrench_allocator
+
+experiment:
+  name: ppo_hold_for_position_equivalent_box_parallel_1024_30s_wrench6_smoke
+  seed: 42
+  tags: [smoke, hold_for_position, wrench6, physical_wrench_allocator, learning_to_swim_equivalent_box]
+  output_dir: artifacts/runs/rl/hold_for_position/physical_wrench_allocator/smoke/equivalent_box_wrench6
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_LearningToSwimEquivalentBox_Parallel_1024_30s_8Thruster_Server/HoldForPosition_EquivalentBox_8Thruster.x86_64
+    env_base_port: 63105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    parallel_mode: multi_area
+    seed: 42
+    environment_parameters:
+      finsim_hold.reward.mode: 1.0
+      finsim_hold.reward.near_goal_action_energy_penalty_scale: 0.60
+  train:
+    num_envs: 2
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    overwrite: true
+    n_steps: 64
+    batch_size: 128
+    n_epochs: 1
+    total_timesteps: 128
+    checkpoint_freq: 128
+    eval_freq: 256

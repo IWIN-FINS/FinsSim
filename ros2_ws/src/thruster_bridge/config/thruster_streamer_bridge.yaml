@@ -1,0 +1,29 @@
+thruster_streamer_bridge:
+  ros__parameters:
+    input_topic: /finsrov/thrusters_out
+
+    # Streamer.hpp expects: AA + uint8 enable + 8 little-endian float32 + CRC16-MODBUS + BB.
+    transport: serial
+    serial_port: /dev/ttyUSB0
+    baudrate: 115200
+
+    # Used only when transport is tcp or udp.
+    host: 192.168.1.10
+    port: 9000
+
+    timeout_sec: 0.2
+    reconnect_interval_sec: 1.0
+    safety_timeout_sec: 0.5
+    enabled: true
+    timeout_enabled: false
+
+    # motion_controller publishes normalized values. Keep output_scale at 1.0
+    # if the lower controller also expects motor throttle in [-1, 1].
+    clamp: true
+    output_scale: 1.0
+    motor_order: [0, 1, 2, 3, 4, 5, 6, 7]
+    motor_signs: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+    # 0 means send every ROS message. Set e.g. 50.0 if the lower link needs rate limiting.
+    send_rate_limit_hz: 0.0
+    log_every_n: 100

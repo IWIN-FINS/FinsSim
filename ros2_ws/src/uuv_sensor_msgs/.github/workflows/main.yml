@@ -1,0 +1,24 @@
+name: Package
+on:
+  push:
+    branches: [ noetic ]
+  pull_request:
+    branches: [ noetic ]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:noetic-ros-base
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Create deb package
+        uses: labust/rospkg-to-deb@v0.1
+        
+      - name: Upload to packagecloud
+        uses: labust/packagecloud-upload@v0.1
+        with:
+          token: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          context: _packages

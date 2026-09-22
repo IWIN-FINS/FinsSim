@@ -1,0 +1,84 @@
+schema_version: 1
+description: >-
+  E2 offline AprilTag horizontal-localization ablation on the archived
+  2026-07-01 submerged bottom-tag grid. Raw images are replayed through the
+  native direct_apriltag_node and refractive_apriltag_pose_node. The active
+  T_world_camera is the full-archive planar-Snell refit recorded below, so
+  runs with this profile are in-sample calibration-consistency checks.
+
+experiment:
+  id: E2
+  profile: e2_apriltag_native_replay_ablation
+  output_root: ros2_ws/data/experiments/E2
+
+source:
+  dataset_root: ${FINSSIM_DATASET_ROOT}/artifacts/datasets/apriltag_pnp_truth
+  session_id: "20260701_190100"
+  samples_file: samples.csv
+  # samples.csv records the AprilTag *outer-border lower-left* corner on the
+  # calibration grid.  It is not a centre-coordinate label and it is not
+  # directly in the current pool_world origin used by T_world_camera.  All
+  # archived tags have the same orientation, so this fixed corner-to-centre
+  # offset is valid for the complete archive.
+  truth_annotation_frame: apriltag_outer_lower_left_calibration_grid
+  truth_to_pool_world:
+    x_scale: 1.0
+    x_offset_m: -2.0
+    y_scale: 1.0
+    y_offset_m: -1.0
+  truth_annotation_to_tag_center:
+    # The surveyed grid uses Unity horizontal (x,z).  In this E2 conversion
+    # they become ROS pool_world horizontal (x,y), respectively.
+    x_offset_m: 0.06
+    y_offset_m: 0.06
+    tag_outer_side_m: 0.12
+
+# These are the archived marker properties, not the current ROV tag settings.
+# marker_length_m is the black-border-to-black-border side required by the
+# AprilTag/PnP implementation.  It is intentionally different from the
+# present vehicle tag length (0.093 m) in direct_apriltag_rgb.yaml.
+tag:
+  family: tag25h9
+  id: 1
+  marker_length_m: 0.098
+
+# Reuse the installed/runtime calibration artifacts verbatim.  The runner
+# copies T_world_camera exactly and adds only an experiment-local identity
+# T_body_tag[1], which represents the bottom tag centre as a virtual body.
+runtime_calibration:
+  camera_calibration_file: ros2_ws/src/perception/calibration/rgb_camera.yaml
+  calibrated_extrinsics_file: ros2_ws/src/state_estimation/config/state_fusion_extrinsics.yaml
+  t_world_camera_provenance:
+    mode: e2_full_dataset_planar_snell_refit
+    source_report: ros2_ws/data/calibration/t_world_camera/e2_full_planar_snell_refit/full_dataset_fit/derived/analysis_report.json
+    deployment_record: ros2_ws/data/calibration/t_world_camera/e2_full_planar_snell_refit_deployment_record.yaml
+    interpretation: in_sample_calibration_consistency_not_independent_accuracy
+  direct_detector_config: ros2_ws/src/perception/config/direct_apriltag_rgb.yaml
+  refractive_pose_config: ros2_ws/src/perception/config/refractive_apriltag_rgb.yaml
+  # E2 explicitly uses the all-point fitted RGB bottom-plane homography.  It
+  # is consumed by direct_apriltag_node's diagnostic centre-pixel world map;
+  # the PnP and Snell pose estimates are computed from K/D and T_world_camera.
+  pool_homography_file: ros2_ws/src/perception/calibration/pool_homography.yaml
+
+geometry:
+  # Historical archive: tag plane at pool bottom and measured water depth 1 m.
+  # pool_world is z-up, so the water surface is z=1 and the tag centre z=0.
+  water_surface_z_m: 1.0
+  tag_plane_z_m: 0.0
+  n_air: 1.0003
+  n_water: 1.333
+  # The archive contains no synchronized IMU/depth telemetry.  These oracle
+  # messages enter the *same* refractive node topics as live runtime input.
+  oracle_pressure_depth_m: 1.0
+  oracle_roll_pitch_yaw_rad: [0.0, 0.0, 0.0]
+
+replay:
+  rate_hz: 2.0
+  startup_wait_sec: 1.5
+  completion_grace_sec: 3.0
+  max_runtime_sec: 900.0
+
+evaluation:
+  evaluated_dimensions: [pool_world_x, pool_world_y]
+  statistical_unit: truth_position_mean
+  excluded_dimensions: [depth, roll, pitch, yaw, ekf_fusion, full_camera_stream_detection_rate]

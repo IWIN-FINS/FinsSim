@@ -1,0 +1,38 @@
+# Isaac Lab T2 trajectory-tracking training for the FinsROV.
+#
+# Task contract:
+#   FinsSim-FinsROV-TrajectoryTracking-v0
+#   30D Unity-compatible trajectory observation / 8 calibrated thruster actions
+#
+# The task's default curriculum stage is 0 (straight-line only).  Set
+# env.trajectory_curriculum_stage=1 or =2 in hydra_overrides when moving to
+# the next pool-safe curriculum stage.
+experiment:
+  name: finsrov_t2_trajectory_tracking_rsl_rl
+  seed: 42
+  tags: [isaaclab, finsrov, t2, trajectory_tracking, rsl_rl]
+  output_dir: null
+
+isaaclab:
+  path: ${ISAACLAB_PATH}
+  task: FinsSim-FinsROV-TrajectoryTracking-v0
+  rl_library: rsl_rl
+  cuda_visible_devices: "1"
+  device: cuda:0
+  num_envs: 2048
+  max_iterations: 400
+  headless: true
+  video: false
+  hydra_overrides: []
+
+train:
+  # Set to an RSL-RL model_*.pt to resume this T2 experiment.
+  resume_checkpoint: null
+
+play:
+  # Set to a model_*.pt below logs/rsl_rl/ to replay the trained T2 policy.
+  checkpoint: null
+  num_envs: 1
+  headless: false
+  real_time: true
+  video: false

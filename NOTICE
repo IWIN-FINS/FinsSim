@@ -1,0 +1,8 @@
+FinsSim
+Copyright (c) 2026 IWIN-FINS and contributors
+
+This repository contains FinsSim-authored code and documentation together with
+third-party components. The Apache-2.0 license in LICENSE applies only to
+FinsSim-owned portions that do not carry a different notice. Third-party
+copyright and license notices must be preserved; see
+THIRD_PARTY_NOTICES.md and the license files in the referenced directories.

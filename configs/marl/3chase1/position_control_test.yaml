@@ -1,0 +1,25 @@
+base_config: chasing_3_chase_1_position_control
+
+experiment:
+  name: chasing_position_control_test
+  seed: 42
+  tags: []
+
+env:
+  unity:
+    env_base_port: 8000
+    parallel_mode: multi_area
+  train:
+    num_envs: 1
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+    num_episodes: 1
+
+trainer:
+  backend: marl
+  overrides:
+    test: true
+    overwrite: true

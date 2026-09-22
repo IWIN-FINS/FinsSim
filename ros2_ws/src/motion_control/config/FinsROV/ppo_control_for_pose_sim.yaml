@@ -1,0 +1,112 @@
+# Sim-only controller config. Use with:
+#   ./scripts/launch_grpc_ros_adapter.sh topic_prefix:=/sim
+#   ros2 launch motion_control motion_controller.launch.py \
+#     params_file:=.../ppo_control_for_pose_sim.yaml
+#
+# The real vehicle link intentionally remains on /finsrov/*.
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    backend_name: ppo_control_for_pose
+    # checkpoint_path: "./artifacts/checkpoints/ControlForPoseBest/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/domain_randomization/ppo_control_for_pose_force_coefficient_dr/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/smooth_near_target/ppo_control_for_pose_rot6d16/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/domain_randomization/ppo_control_for_pose_random_mass_dr/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/small_force_coefficient/ppo_control_for_pose/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/angular_stability/ppo_control_for_pose/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/domain_randomization/ppo_control_for_pose_yaw_torque_dr/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/yaw_torque/ppo_control_for_pose/checkpoints/best_model.zip"
+    checkpoint_path: "./artifacts/runs/rl/domain_randomization/ppo_control_for_pose_force_coefficient_dr_0809/checkpoints/best_model.zip"
+    # backend_name and checkpoint_path belong to this controller profile.
+    # Select a different YAML profile instead of overriding either parameter.
+
+    device: cuda
+    control_rate_hz: 10.0
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode_topic: /sim/motion_controller/control_mode
+
+    # ROS FLU/ENU -> controller xyz remap.
+    # Default means:
+    # controller.x = ros.x
+    # controller.y = ros.z
+    # controller.z = ros.y
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    # Controller positions are already Unity/controller coordinates.
+    # Real-vehicle pool/depth offsets must be handled before this node.
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+    thruster_topic: /sim/finsrov/thrusters_out
+    pwm_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: force_n
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    # Per-thruster post-scale applied after PPO/action conversion and before
+    # publishing /sim/finsrov/thrusters_out. Use this for sim-only tuning
+    # without changing the real-vehicle controller config.
+    thruster_output_scale:
+      - 0.5  # V_LF
+      - 0.5  # V_LB
+      - 0.5  # V_RB
+      - 0.5  # V_RF
+      - 0.2  # H_LF
+      - 0.2  # H_LB
+      - 0.2  # H_RB
+      - 0.2  # H_RF
+    # These limits are derived from the V4 Pro1 command-limited thruster
+    # curve used by finsrov_hardware_bridge_v4_pro1.yaml:
+    #   data source: ros2_ws/data/thruster_curve/finsrov_v4_pro1
+    #   force_N = c1 * (rpm_min_or_max * 2*pi / 60)^2
+    # Do not apply another 0.4 factor here. The MCU/bridge command range
+    # [-1, 1] already maps to the safe limited RPM range represented by
+    # rpm_min/rpm_max in the fitted curve.
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+    odom_topic: ""
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    # Pose control must not keep running on frozen x/y from fusion hold mode.
+    allowed_vision_modes: [fresh, coast]
+
+    stuck_recovery:
+      status_topic: /sim/motion_controller/status/stuck
+
+    command_position_world_topic: /sim/motion_controller/command/position_controller_world
+    command_position_body_topic: /sim/motion_controller/command/position_controller_body
+    command_pose_body_topic: /sim/motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /sim/motion_controller/command/velocity_controller_body
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    reset_topic: /sim/finsrov/reset
+    reset_service_name: /sim/motion_controller/reset_vehicle
+    status_active_pose_topic: /sim/motion_controller/status/active_pose
+    status_error_body_topic: /sim/motion_controller/status/error_body
+    status_reached_topic: /sim/motion_controller/status/reached
+    debug_observation_topic: /sim/motion_controller/debug/observation
+    debug_action_topic: /sim/motion_controller/debug/action
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+    debug_policy_info_topic: /sim/motion_controller/debug/policy_info
+
+    position_outer_loop_kp: [0.8, 0.6, 0.8]
+    max_body_velocity: [0.30, 0.20, 0.30]
+    # Used only by new 16D pose checkpoints trained with
+    # ControlForPosition_IncrementalReward:
+    # [localTarget/scale(3), relativeRotation6D(6), localVel/scale(3),
+    #  localAngularVel/scale(3), distance/scale(1)].
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

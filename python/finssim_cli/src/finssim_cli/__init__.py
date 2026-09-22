@@ -1,0 +1,1 @@
+"""FinsSim command line interface."""

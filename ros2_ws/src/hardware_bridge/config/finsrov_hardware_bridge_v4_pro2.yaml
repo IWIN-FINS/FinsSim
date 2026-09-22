@@ -1,0 +1,68 @@
+hardware_bridge:
+  ros__parameters:
+    transport: udp
+    serial_port: /dev/ttyUSB0
+    baudrate: 115200
+    host: 192.168.1.10
+    port: 9000
+    udp_bind_host: 0.0.0.0
+    udp_bind_port: 54321
+    udp_remote_host: 192.168.0.2
+    udp_remote_port: 58766
+    timeout_sec: 0.2
+    reconnect_interval_sec: 1.0
+
+    input_thruster_topic: /finsrov/thrusters_out
+    imu_raw_topic: /finsrov/hardware/imu_raw
+    depth_raw_topic: /finsrov/hardware/depth_raw
+    status_topic: /finsrov/hardware/status
+    thruster_echo_topic: /finsrov/hardware/thruster_cmd_echo
+    motor_rpm_raw_topic: /finsrov/hardware/motor_rpm_raw
+    hardware_telemetry_topic: /finsrov/hardware/telemetry
+    frame_id: finsrov_base_link
+    depth_frame_id: finsrov_depth_link
+    # MCU sensor frame is right-handed x-back, y-right, z-up.
+    imu_sensor_to_base_quaternion_xyzw: [0.0, 0.0, 1.0, 0.0]
+
+    command_mode: force_n
+    firmware_max_rpm: 3000.0
+    # Canonical order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF].
+    # Horizontal values come from ros2_ws/data/thruster_curve/M005..M008_rpm_sweep.
+    # Vertical values are explicit placeholders and must be replaced after vertical thruster sweep.
+    thruster_curve:
+      model: signed_quadratic
+      c1_positive: [1.118926888e-04, 9.387909395e-05, 9.387909395e-05, 1.118926888e-04, 9.387909395e-05, 1.118926888e-04, 9.387909395e-05, 1.118926888e-04]
+      c1_negative: [1.0372069015e-04, 7.223931035e-05, 7.223931035e-05, 1.0372069015e-04, 7.223931035e-05, 1.0372069015e-04, 7.223931035e-05, 1.0372069015e-04]
+      rpm_min: [-2647.9121095, -2696.899414, -2696.899414, -2647.9121095, -2696.899414, -2647.9121095, -2696.899414, -2647.9121095]
+      rpm_max: [2628.0717775, 2677.580078, 2677.580078, 2628.0717775, 2677.580078, 2628.0717775, 2677.580078, 2628.0717775]
+      force_deadband_n: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      min_effective_rpm_positive: [613.6658325, 476.0183565, 476.0183565, 613.6658325, 476.0183565, 613.6658325, 476.0183565, 613.6658325]
+      min_effective_rpm_negative: [313.004013, 342.577713, 342.577713, 313.004013, 342.577713, 313.004013, 342.577713, 313.004013]
+    clamp: true
+    output_scale: 1.0
+    enabled: false
+    send_zero_on_start: true
+    timeout_enabled: false
+    # Input /finsrov/thrusters_out uses the Unity canonical order:
+    #   [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF]
+    # MCU direct command order is:
+    #   [M1 LF lower, M2 LF upper, M3 LB upper, M4 LB lower,
+    #    M5 RB lower, M6 RB upper, M7 RF upper, M8 RF lower]
+    # Therefore each MCU output index reads from the listed input index.
+    motor_order: [4, 0, 1, 7, 6, 2, 3, 5]
+    # Field-tested output signs in MCU output order.
+    motor_signs: [-1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0]
+
+    safety_timeout_sec: 0.5
+    telemetry_rate_timeout_sec: 0.5
+    read_rate_hz: 200.0
+    send_rate_limit_hz: 0.0
+    status_rate_hz: 1.0
+    log_every_n: 100
+
+    # Debug mask bits:
+    #   bit0 / 0x00000001: MCU thruster command echo
+    debug_mask: 0
+    debug_echo_decimation: 1
+    debug_config_send_on_start: true
+    debug_config_retry_period_sec: 0.1

@@ -1,0 +1,15 @@
+collector:
+  ros__parameters:
+    detector_node: /direct_apriltag_node
+    dataset_root: artifacts/datasets/apriltag_pnp_truth
+    dataset_capture_request_topic: /finsrov/dataset/capture_request
+    dataset_capture_result_topic: /finsrov/dataset/capture_result
+    camera_control_topic: /finsrov/camera/control
+    camera_status_topic: /finsrov/camera/status
+    vision_status_topic: /finsrov/vision/status
+    pnp_topic: /finsrov/vision/tag_poses_3d_camera
+    debug_image_topic: /finsrov/camera/debug/compressed
+    default_width: 1280
+    default_height: 720
+    default_fps: 30.0
+    default_fourcc: MJPG

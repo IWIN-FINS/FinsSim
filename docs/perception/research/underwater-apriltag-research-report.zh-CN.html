@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinsROV 水下 AprilTag 定位调研报告</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #1f2933;
+      --muted: #5f6b7a;
+      --border: #d6dee8;
+      --bg: #ffffff;
+      --soft: #f5f7fa;
+      --accent: #0f6c81;
+      --warn: #8a4b00;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.62;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 28px 0 12px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-top: 0;
+    }
+    h2 {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    h3 {
+      color: #243b53;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .meta, .note {
+      color: var(--muted);
+    }
+    .callout {
+      background: var(--soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      margin: 18px 0;
+    }
+    .warning {
+      background: #fff7e6;
+      border-left-color: var(--warn);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 0.94rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      vertical-align: top;
+    }
+    th {
+      background: #eef3f8;
+      text-align: left;
+      font-weight: 650;
+    }
+    code {
+      background: #eef3f8;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+    pre {
+      background: #111827;
+      color: #e5e7eb;
+      padding: 14px 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    .tag {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: #e6f3f7;
+      color: #0f5f73;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .tag.warn {
+      background: #fff0d0;
+      color: #7a4300;
+    }
+    .tag.bad {
+      background: #fdecea;
+      color: #8a1f11;
+    }
+    .tag.ok {
+      background: #e8f5e9;
+      color: #1b6b2a;
+    }
+    ol.refs li {
+      margin: 8px 0;
+    }
+    .small {
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>FinsROV 水下 AprilTag 定位调研报告</h1>
+  <p class="meta">检索日期：2026-07-01。检索范围：Google Scholar、论文主页、出版社页面、arXiv、GitHub、项目文档。本文关注 AprilTag/ArUco 在水下定位时的几何误差、折射修正、开源代码，以及对当前 FinsROV ROS2 感知链路的落地方案。</p>
+
+  <div class="callout warning">
+    <strong>核心结论：</strong>AprilTag 潜入水下以后，检测本身不一定失效，但普通 pinhole `solvePnP` 的几何模型会出现系统性偏差。偏差来源取决于相机位置：如果相机在水下平口壳体内，问题是空气-玻璃-水多层平面折射；如果相机在水面上方俯视水下 tag，问题是空气-水界面折射，而且界面固定在世界水面上，还可能有波纹。两种模型不能直接混用。
+  </div>
+
+  <h2>1. 对当前 FinsROV 的直接判断</h2>
+  <p>你的现有链路大致是：相机检测 AprilTag PnP，水压计给 depth，IMU 给姿态，然后在 <code>state_estimation</code> 中融合。这个方向是对的，但水下 tag 会带来两个风险：</p>
+  <ul>
+    <li><strong>几何偏差：</strong>普通 AprilTag PnP 假设光线在单一介质中直线传播。tag 在水下时，光线穿过水面或舱窗会折射，投影不再满足普通针孔模型。</li>
+    <li><strong>观测质量下降：</strong>水体吸收、散射、浊度、表面反光、运动模糊会降低角点稳定性。论文评估显示 AprilTag 在水下通常比 ArUco/ARToolKit 更稳，但距离、角度和浊度仍会显著影响检测质量。<sup><a href="#ref-1">[1]</a></sup></li>
+  </ul>
+
+  <h3>1.1 两种必须区分的折射场景</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>场景</th>
+        <th>物理模型</th>
+        <th>对 FinsROV 的含义</th>
+        <th>优先方案</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>相机在水下，装在平口防水壳内</td>
+        <td>空气-玻璃-水多层平面折射，折射界面相对相机固定。</td>
+        <td>CalibMar、Pinax、flat-port refractive camera model 可以直接参考。<sup><a href="#ref-10">[10]</a></sup><sup><a href="#ref-11">[11]</a></sup></td>
+        <td>离线标定平口壳体参数；短期用 rectification map 后再跑 AprilTag；长期实现 refractive PnP/refinement。</td>
+      </tr>
+      <tr>
+        <td>相机在水面上方，俯视水下 AprilTag</td>
+        <td>空气-水单界面折射，界面通常固定在世界水面；若水面有波纹，法向随时间变化。</td>
+        <td>这是你当前固定俯视相机更可能遇到的问题。普通 PnP 的 <code>z</code> 和横向位置都会受深度影响。</td>
+        <td>使用水压计深度强约束；根据像素射线、水面平面和 Snell 定律修正 x/y；tag 姿态只在重投影残差小的时候使用。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>1.2 推荐落地路线</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>阶段</th>
+        <th>目标</th>
+        <th>做法</th>
+        <th>风险</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>短期，1-2 天</td>
+        <td>先让实船定位可用。</td>
+        <td>保留现有 AprilTag PnP，但 <code>position.z</code> 只用水压计；视觉只更新 x/y 和低频 yaw；用 tag 像素尺寸、重投影误差、decision margin、视角做 gate。</td>
+        <td>仍有深度相关系统偏差；水面反光/波纹会造成跳变。</td>
+      </tr>
+      <tr>
+        <td>中期，1-2 周</td>
+        <td>修正水面折射导致的 x/y 偏差。</td>
+        <td>做一个“空气相机看水下点”的 refractive ray 校正：像素反投影为空气射线，和水面相交，用 Snell 定律折射到水中，再结合压力 depth 求水下点位置。用多 tag/多角点非线性优化 body pose。</td>
+        <td>需要稳定水面平面参数；水面波纹无法完全建模。</td>
+      </tr>
+      <tr>
+        <td>长期，研究版</td>
+        <td>高精度 6D 位姿和可解释协方差。</td>
+        <td>使用 refractive absolute pose / refractive pose refinement。单个 AprilTag 只有 4 个共面角点，建议使用多 tag board 或 3D-AprilTag 结构。<sup><a href="#ref-13">[13]</a></sup><sup><a href="#ref-14">[14]</a></sup></td>
+        <td>实现复杂度高；需要 Ceres/g2o 优化和严格标定。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2. 水下 AprilTag / ArUco 定位论文</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>论文</th>
+        <th>方法与结论</th>
+        <th>是否处理水下折射</th>
+        <th>开源代码</th>
+        <th>对 FinsROV 的启示</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>An Evaluation of Artificial Fiducial Markers in Underwater Environments</strong><br>dos Santos Cesar et al., OCEANS 2015。<sup><a href="#ref-1">[1]</a></sup></td>
+        <td>比较 ARToolKit、AprilTags、ArUco 在不同浊度和照明下的检测距离、角度、尺寸和耗时。AprilTags 通常鲁棒性最好，但检测较慢。</td>
+        <td><span class="tag warn">未建模折射</span><br>重点是浊度、照明、散射、对比度。</td>
+        <td>无专属代码；使用已有 ARToolKit、AprilTag、ArUco。</td>
+        <td>水下用 AprilTag 是合理选择；要把距离、角度、像素面积作为观测质量门限。</td>
+      </tr>
+      <tr>
+        <td><strong>Underwater AprilTag SLAM and Calibration for High Precision Robot Localization</strong><br>Westman &amp; Kaess, CMU-RI-TR-18-43, 2018。<sup><a href="#ref-2">[2]</a></sup></td>
+        <td>用 AprilTag board 实现水下高精度、无漂移 localization/SLAM，同时估计相机到车辆里程计坐标外参。</td>
+        <td><span class="tag warn">主要用水下标定吸收误差</span><br>使用针孔模型和畸变校正，未做严格 Snell 折射模型。</td>
+        <td>未找到专属 GitHub。</td>
+        <td>对 FinsROV 最重要的是：相机-机体系外参应可标定；多个 tag 固定成板比散装单 tag 更稳定。</td>
+      </tr>
+      <tr>
+        <td><strong>An Underwater Visual Navigation Method Based on Multiple ArUco Markers</strong><br>Xu et al., JMSE 2021。<sup><a href="#ref-3">[3]</a></sup></td>
+        <td>在水下布置多个 ArUco marker，建立单 marker 噪声模型，并做多 marker 最优融合。</td>
+        <td><span class="tag warn">未严格建模折射</span><br>文中强调水下相机标定可减小折射影响。</td>
+        <td>未找到专属 GitHub。</td>
+        <td>适合 FinsROV：多 tag 融合比单 tag 稳定；可以把距离/角度映射到 EKF 测量协方差。</td>
+      </tr>
+      <tr>
+        <td><strong>Underwater Marker-Based Pose-Estimation With Associated Uncertainty</strong><br>Risholm et al., ICCVW/OceanVision 2021。<sup><a href="#ref-4">[4]</a></sup></td>
+        <td>用 EfficientDet 预测 ArUco 角点，PnP 得到 6DoF，同时用 MC dropout 输出不确定度；浊度升高时误差明显变大。</td>
+        <td><span class="tag warn">未建模折射</span><br>重点是浊度和不确定度。</td>
+        <td>未找到专属 GitHub。</td>
+        <td>状态融合层不应只接收 pose，应接收协方差或质量指标。浊水/远距/角点差时降低视觉权重。</td>
+      </tr>
+      <tr>
+        <td><strong>Evaluation of Underwater AprilTag Localization for Highly Agile Micro Underwater Robots</strong><br>Bauschmann et al., IROS 2023。<sup><a href="#ref-5">[5]</a></sup></td>
+        <td>系统评估 AprilTag 水下定位，关注动态运动、相机选择和标定介质；结论包括水下标定很重要，精度随相机距离近似线性下降。</td>
+        <td><span class="tag warn">强调水下标定</span><br>不以折射物理模型为主。</td>
+        <td>未找到专属 GitHub。</td>
+        <td>必须在最终介质/安装状态下标定；可以用距离-误差曲线设视觉协方差。</td>
+      </tr>
+      <tr>
+        <td><strong>Towards Robust Autonomous Underwater Docking for Long-Term Under-Ice Exploration</strong><br>Creutz et al., OCEANS 2023。<sup><a href="#ref-6">[6]</a></sup></td>
+        <td>用 AprilTag 视觉特征、USBL、IMU、DVL、压力等做融合和 docking 状态机，201 次对接成功 194 次。</td>
+        <td><span class="tag warn">未重点建模折射</span><br>重点是融合、状态机和传感器异常处理。</td>
+        <td>未找到专属 GitHub。</td>
+        <td>视觉丢失时必须有状态机和 fallback；不要让 EKF 因视觉失效而发散。</td>
+      </tr>
+      <tr>
+        <td><strong>Visual Close-Range Navigation and Docking of Underwater Vehicles</strong><br>Rannestad et al., OCEANS 2023。<sup><a href="#ref-7">[7]</a></sup></td>
+        <td>使用 docking plate 上的 ArUco 标记进行单目近距导航和对接。</td>
+        <td><span class="tag warn">未找到严格折射模型</span></td>
+        <td>未找到专属 GitHub。</td>
+        <td>如果 FinsROV 后续做坞站/回收，tag 应作为坞站结构的一部分，而不是临时贴纸。</td>
+      </tr>
+      <tr>
+        <td><strong>Relative Localization and Dynamic Tracking of Underwater Robots Based on 3D-AprilTag</strong><br>Tang et al., JMSE 2025。<sup><a href="#ref-8">[8]</a></sup></td>
+        <td>把多个 AprilTag 贴到 3D 结构不同面，结合距离、视角、置信度加权和切换 Kalman filter，减少视角变化带来的跳变。</td>
+        <td><span class="tag warn">未严格建模折射</span><br>处理低光、浊度、遮挡和多面 tag 切换。</td>
+        <td>未找到专属 GitHub。</td>
+        <td>如果单个水平 tag 容易出视野或姿态退化，应改成多 tag board 或 3D tag 结构。</td>
+      </tr>
+      <tr>
+        <td><strong>DeepTurbid: Underwater Marker Detection and Pose Estimation in Turbid Conditions</strong><br>Meng et al., Information Fusion 2025/2026。<sup><a href="#ref-9">[9]</a></sup></td>
+        <td>面向浑浊水下 marker detection 和 pose estimation 的深度模型，预测关键点和 marker ID，并用水下成像模型合成训练数据。</td>
+        <td><span class="tag warn">偏成像退化/浊度</span><br>不是几何折射 PnP 主线。</td>
+        <td>GitHub 存在，但当前主要是占位/说明，代码可用性有限。<sup><a href="#ref-30">[30]</a></sup></td>
+        <td>浊度严重时，传统角点检测可能不够；但当前 FinsROV 短期不建议先上深度模型。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. 折射相机模型与 Refractive PnP 论文</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>论文/工具</th>
+        <th>核心内容</th>
+        <th>适合解决什么问题</th>
+        <th>开源代码</th>
+        <th>FinsROV 适配建议</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Flat Refractive Geometry</strong><br>Treibitz et al., TPAMI 2012 / CVPR 2008。<sup><a href="#ref-10">[10]</a></sup></td>
+        <td>说明平面折射会破坏普通单视点针孔模型，建立 flat refractive geometry。</td>
+        <td>解释为什么普通 PnP 会系统性偏。</td>
+        <td>未找到官方 GitHub。</td>
+        <td>作为理论依据，不建议直接从这篇开始写工程代码。</td>
+      </tr>
+      <tr>
+        <td><strong>Refractive Calibration of Underwater Cameras</strong><br>Jordt-Sedlazeck &amp; Koch, ECCV 2012。<sup><a href="#ref-11">[11]</a></sup></td>
+        <td>标定水下相机平口壳体参数，包括玻璃法向和相机-玻璃距离。</td>
+        <td>水下相机平口壳体标定。</td>
+        <td>CalibMar 实现了相关 flat-port model。<sup><a href="#ref-25">[25]</a></sup></td>
+        <td>如果相机以后放入水下壳体，这是首选标定方向。</td>
+      </tr>
+      <tr>
+        <td><strong>The Pinax-Model for Accurate and Efficient Refraction Correction of Underwater Cameras in Flat-Pane Housings</strong><br>Łuczyński et al., Ocean Engineering 2017。<sup><a href="#ref-12">[12]</a></sup></td>
+        <td>工程化平口折射校正模型，用 lookup/rectification 实现高效校正。</td>
+        <td>先校正图像，再跑普通 AprilTag。</td>
+        <td>有 Pinax 代码和 CamOdoCal+Pinax Docker 工具。<sup><a href="#ref-26">[26]</a></sup><sup><a href="#ref-27">[27]</a></sup></td>
+        <td>如果 camera 在平口壳体内，短期性价比高；如果 camera 在水面上方，则不能直接套用。</td>
+      </tr>
+      <tr>
+        <td><strong>Absolute Pose for Cameras Under Flat Refractive Interfaces</strong><br>Håner &amp; Åström, CVPR 2015。<sup><a href="#ref-13">[13]</a></sup></td>
+        <td>给出相机通过已知平面折射界面观测已知 3D 点时的 absolute pose solver。</td>
+        <td>折射版 PnP。</td>
+        <td>有 MATLAB/C++ MEX 研究代码。<sup><a href="#ref-28">[28]</a></sup></td>
+        <td>单个 AprilTag 只有 4 角点，对通用 refractive PnP 不稳；建议多 tag board。</td>
+      </tr>
+      <tr>
+        <td><strong>Refractive Pose Refinement</strong><br>Hu et al., IJCV 2023。<sup><a href="#ref-14">[14]</a></sup></td>
+        <td>对 absolute/relative pose 做 refractive refinement，并区分界面固定在相机上和固定在世界中两类场景。</td>
+        <td>用普通 PnP 做初值，再做折射非线性优化。</td>
+        <td>RefractiveSfM 开源。<sup><a href="#ref-29">[29]</a></sup></td>
+        <td>对 FinsROV 很关键：水面上方相机属于“界面固定在世界中”的思路；水下平口壳体属于“界面固定在相机上”。</td>
+      </tr>
+      <tr>
+        <td><strong>CalibMar: A Calibration Tool for Refractive Underwater Vision</strong><br>Seegräber et al., 2024/2025。<sup><a href="#ref-15">[15]</a></sup></td>
+        <td>开源水下折射标定工具，支持 camera/stereo/housing calibration，flat/dome port。</td>
+        <td>离线标定水下相机和壳体参数。</td>
+        <td>CalibMar GitHub/GitLab。<sup><a href="#ref-25">[25]</a></sup></td>
+        <td>建议作为 FinsROV 相机水下标定工具链候选。</td>
+      </tr>
+      <tr>
+        <td><strong>Refractive COLMAP: Refractive Structure-from-Motion Revisited</strong><br>She et al., IROS 2024。<sup><a href="#ref-16">[16]</a></sup></td>
+        <td>把 flat/dome refractive camera model 集成进 COLMAP，支持 refractive SfM 和 bundle adjustment。</td>
+        <td>离线建图、外参验证、多视角折射优化。</td>
+        <td>COLMAP Underwater 开源。<sup><a href="#ref-24">[24]</a></sup></td>
+        <td>不适合直接上艇实时闭环，但适合离线评估和借用投影/BA 实现。</td>
+      </tr>
+      <tr>
+        <td><strong>Online Refractive Camera Model Calibration in Visual Inertial Odometry</strong><br>Singh &amp; Alexis, IROS 2024。<sup><a href="#ref-17">[17]</a></sup></td>
+        <td>在 VIO 状态中在线估计折射率，使空气中标定的相机可在水下使用。</td>
+        <td>水下 VIO，而不是 marker PnP。</td>
+        <td>ReAqROVIO 开源。<sup><a href="#ref-23">[23]</a></sup></td>
+        <td>后续如果 FinsROV 做视觉惯导，可以参考；当前 AprilTag 定位不建议先走这条。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. GitHub / 开源代码评估</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>项目</th>
+        <th>类型</th>
+        <th>能否直接用于 FinsROV</th>
+        <th>主要限制</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="https://github.com/AprilRobotics/apriltag">AprilRobotics/apriltag</a><sup><a href="#ref-18">[18]</a></sup></td>
+        <td>官方 AprilTag 3 C 库。</td>
+        <td><span class="tag ok">已适合当前 C++ detector 路线</span></td>
+        <td>不处理水下折射；pose estimation 是普通针孔模型。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/christianrauch/apriltag_ros">christianrauch/apriltag_ros</a><sup><a href="#ref-19">[19]</a></sup></td>
+        <td>ROS2 AprilTag node。</td>
+        <td><span class="tag warn">可参考接口</span></td>
+        <td>图像 topic 链路可能带来性能成本；仍是普通 PnP。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/CASIA-RoboticFish/FBUS-EKF">CASIA-RoboticFish/FBUS-EKF</a><sup><a href="#ref-20">[20]</a></sup></td>
+        <td>水下 fiducial + stereo + IMU EKF，含折射修正。</td>
+        <td><span class="tag ok">高参考价值</span></td>
+        <td>绑定特定传感器和较旧依赖；不是 ROS2 包，需要拆算法。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/ptrmu/fiducial_vlam">ptrmu/fiducial_vlam</a><sup><a href="#ref-21">[21]</a></sup></td>
+        <td>ROS2 fiducial marker SLAM/localization。</td>
+        <td><span class="tag warn">可参考 marker map 和 ROS2 消息组织</span></td>
+        <td>不是水下专用；无折射修正。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/clydemcqueen/orca3">clydemcqueen/orca3</a><sup><a href="#ref-22">[22]</a></sup></td>
+        <td>BlueROV2 + ROS2 + Gazebo，含 fiducial_vlam 流程。</td>
+        <td><span class="tag warn">架构参考</span></td>
+        <td>已归档，ROS2 版本旧；无折射模型。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/ntnu-arl/reaqrovio">ntnu-arl/reaqrovio</a><sup><a href="#ref-23">[23]</a></sup></td>
+        <td>在线折射 VIO。</td>
+        <td><span class="tag warn">研究参考</span></td>
+        <td>ROS1/ROVIO；不是 marker 定位。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/MDSKiel/colmap_underwater">MDSKiel/colmap_underwater</a><sup><a href="#ref-24">[24]</a></sup></td>
+        <td>Refractive COLMAP。</td>
+        <td><span class="tag warn">离线标定/评估</span></td>
+        <td>重型离线 SfM，不适合实时控制闭环。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/MDSKiel/calibmar">MDSKiel/calibmar</a><sup><a href="#ref-25">[25]</a></sup></td>
+        <td>水下相机/壳体标定 GUI。</td>
+        <td><span class="tag ok">推荐离线标定候选</span></td>
+        <td>需要把输出参数转换进 FinsROV calibration YAML。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/tomluc/Pinax-camera-model">tomluc/Pinax-camera-model</a><sup><a href="#ref-26">[26]</a></sup></td>
+        <td>Pinax 平口折射校正代码。</td>
+        <td><span class="tag warn">适合平口壳体，不适合直接修水面俯视</span></td>
+        <td>较老；非 ROS2；许可证和工程可维护性要单独检查。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/jacobs-robotics/uw-calibration-pinax">jacobs-robotics/uw-calibration-pinax</a><sup><a href="#ref-27">[27]</a></sup></td>
+        <td>CamOdoCal + Pinax Docker 工具链。</td>
+        <td><span class="tag warn">离线工具链参考</span></td>
+        <td>Docker/nvidia-docker；老项目；非 ROS2 runtime。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/sebhaner/refractive_pose">sebhaner/refractive_pose</a><sup><a href="#ref-28">[28]</a></sup></td>
+        <td>CVPR 2015 refractive absolute pose solver。</td>
+        <td><span class="tag warn">可移植算法思想</span></td>
+        <td>MATLAB/C++ MEX 研究代码；需要自己工程化。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/diku-dk/RefractiveSfM">diku-dk/RefractiveSfM</a><sup><a href="#ref-29">[29]</a></sup></td>
+        <td>Refractive pose refinement / SfM 代码。</td>
+        <td><span class="tag warn">适合原型验证</span></td>
+        <td>MATLAB；非实时；需要重写 C++/Ceres 才能进 ROS2。</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/fanyi-meng/DeepTurbid">fanyi-meng/DeepTurbid</a><sup><a href="#ref-30">[30]</a></sup></td>
+        <td>浑浊水下 marker detection/pose 方向。</td>
+        <td><span class="tag bad">暂不建议依赖</span></td>
+        <td>当前代码可用性有限；更像后续研究储备。</td>
+      </tr>
+      <tr>
+        <td><a href="https://actag.readthedocs.io/">AcTag</a><sup><a href="#ref-31">[31]</a></sup></td>
+        <td>光学 + 声学 fiducial marker。</td>
+        <td><span class="tag warn">可作为水下极端浊度备选方向</span></td>
+        <td>不是现有 AprilTag 贴纸的直接替代；需要声学成像硬件。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. 对当前 ROS2 架构的修改建议</h2>
+  <h3>5.1 不建议继续把普通 PnP 的 z 当真实深度</h3>
+  <p>水下 AprilTag 的 <code>T_camera_tag.position.z</code> 可能被折射系统性拉偏。当前 FinsROV 已有水压计，应当让压力深度主导 <code>position.z</code>。视觉 PnP 的 z 可以作为 debug 和异常检测，不应强约束 EKF。</p>
+
+  <h3>5.2 状态融合层应使用质量感知观测</h3>
+  <p>建议 <code>/finsrov/vision/tag_poses_3d_camera</code> 或后续新消息增加/使用这些字段：</p>
+  <ul>
+    <li><code>reprojection_error_px</code></li>
+    <li><code>decision_margin</code></li>
+    <li>tag 像素边长 / 面积</li>
+    <li>tag 入射角估计</li>
+    <li>是否经过 refractive correction</li>
+    <li>观测协方差或质量等级</li>
+  </ul>
+
+  <h3>5.3 如果相机在水面上方，建议实现水面折射校正节点</h3>
+  <p>实现已统一放在 <code>perception</code>；折射约束位姿与状态融合之间仍通过 ROS2 topic 解耦：</p>
+  <pre><code>AprilTag corner pixels
+  + camera intrinsics
+  + T_world_camera
+  + water_plane_world: n, d
+  + refractive_index_air / refractive_index_water
+  + pressure depth
+  + T_tag_body
+  => corrected visual measurement: x, y, yaw, covariance</code></pre>
+  <p>最小工程实现可以先只估计 tag 中心 x/y：像素中心反投影成空气射线，与水面相交，按 Snell 定律折射成水中射线，再与 <code>z=-depth_m</code> 平面相交。之后再扩展到四个角点的非线性 pose optimization。</p>
+
+  <h3>5.4 如果相机改成水下相机，优先接 CalibMar/Pinax</h3>
+  <p>如果后续把相机放进防水壳并浸入水中，应转向 flat-port housing 模型。短期用 CalibMar 标定 housing 参数，Pinax 或类似 rectification map 做图像校正；中长期再把 refractive projection 写进 tag pose optimizer。</p>
+
+  <h2>6. 建议实验</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>实验</th>
+        <th>目的</th>
+        <th>做法</th>
+        <th>输出</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>深度误差曲线</td>
+        <td>量化普通 PnP 随水深偏移。</td>
+        <td>把 AprilTag 固定在已知 x/y，分别放在 0、0.2、0.4、0.6、0.8 m 深度，记录普通 PnP 和真实点差异。</td>
+        <td><code>error_xy(depth, image_radius)</code> 拟合曲线。</td>
+      </tr>
+      <tr>
+        <td>水面扰动测试</td>
+        <td>评估波纹对视觉观测的影响。</td>
+        <td>静水、轻微扰动、推进器扰动三种状态下采集 tag pose。</td>
+        <td>视觉协方差放大规则和 reject gate。</td>
+      </tr>
+      <tr>
+        <td>多 tag board 测试</td>
+        <td>解决单 tag 角点少、遮挡和姿态退化。</td>
+        <td>制作一个刚性 board，上面放 3-6 个 AprilTag，已知相对位置。</td>
+        <td>多 tag 融合后的稳定性提升。</td>
+      </tr>
+      <tr>
+        <td>压力深度强约束融合</td>
+        <td>避免视觉 z 错误进入控制。</td>
+        <td>EKF 中只用压力更新 z，视觉只更新 x/y/yaw。</td>
+        <td>控制器输入更稳定。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7. 结论</h2>
+  <ol>
+    <li>水下 AprilTag 是可行方向，但普通 PnP 不能无条件相信，尤其是 tag 在水下、相机在水面上方时。</li>
+    <li>当前 FinsROV 最稳妥的第一版是：压力深度定 z，IMU 定姿态主频，AprilTag 提供 x/y 和低频 yaw 校正，并用质量门限控制 EKF 更新。</li>
+    <li>如果追求更高精度，需要实现折射几何：水面上方俯视用 air-water refractive ray model；水下平口相机用 flat-port multi-layer refractive camera model。</li>
+    <li>开源代码方面，直接可用的 detector 仍是 AprilTag 3；折射标定优先看 CalibMar/Pinax；refractive PnP/refinement 可参考 <code>refractive_pose</code> 和 <code>RefractiveSfM</code>，但需要工程化。</li>
+  </ol>
+
+  <h2>尾注 / References</h2>
+  <ol class="refs">
+    <li id="ref-1">Diego B. dos Santos Cesar et al. “An Evaluation of Artificial Fiducial Markers in Underwater Environments.” OCEANS 2015. DOI: 10.1109/OCEANS-Genova.2015.7271491. <a href="https://ieeexplore.ieee.org/document/7271491/">IEEE</a> / <a href="https://www.researchgate.net/publication/303752217_An_evaluation_of_artificial_fiducial_markers_in_underwater_environments">ResearchGate</a></li>
+    <li id="ref-2">Eric Westman, Michael Kaess. “Underwater AprilTag SLAM and Calibration for High Precision Robot Localization.” CMU-RI-TR-18-43, 2018. <a href="https://publications.ri.cmu.edu/underwater-apriltag-slam-and-calibration-for-high-precision-robot-localization">CMU RI page</a> / <a href="https://www.ri.cmu.edu/app/uploads/2018/10/westman18tr.pdf">PDF</a></li>
+    <li id="ref-3">Zhizun Xu et al. “An Underwater Visual Navigation Method Based on Multiple ArUco Markers.” JMSE 2021. DOI: 10.3390/jmse9121432. <a href="https://www.mdpi.com/2077-1312/9/12/1432">MDPI</a></li>
+    <li id="ref-4">Petter Risholm et al. “Underwater Marker-Based Pose-Estimation With Associated Uncertainty.” ICCVW/OceanVision 2021. <a href="https://openaccess.thecvf.com/content/ICCV2021W/OceanVision/papers/Risholm_Underwater_Marker-Based_Pose-Estimation_With_Associated_Uncertainty_ICCVW_2021_paper.pdf">CVF PDF</a> / <a href="https://www.sintef.no/en/publications/publication/0198cc624f5c-6476e903-dcb1-4a7d-8325-c821dbb9bab6/">SINTEF</a></li>
+    <li id="ref-5">Nathalie Bauschmann et al. “Evaluation of Underwater AprilTag Localization for Highly Agile Micro Underwater Robots.” IROS 2023. DOI: 10.1109/IROS55552.2023.10341764. <a href="https://portal.fis.tum.de/en/publications/evaluation-of-underwater-apriltag-localization-for-highly-agile-m/">TUM portal</a> / <a href="https://ieeexplore.ieee.org/document/10341764/">IEEE</a></li>
+    <li id="ref-6">Tom Creutz et al. “Towards Robust Autonomous Underwater Docking for Long-Term Under-Ice Exploration.” OCEANS 2023. DOI: 10.1109/OCEANSLimerick52467.2023.10244435. <a href="https://www.dfki.de/fileadmin/user_upload/import/13345_Oceans23_TomCreutz_221220-073.pdf">PDF</a> / <a href="https://ieeexplore.ieee.org/document/10244435/">IEEE</a></li>
+    <li id="ref-7">Thomas L. Rannestad et al. “Visual Close-Range Navigation and Docking of Underwater Vehicles.” OCEANS 2023. DOI: 10.1109/OCEANSLimerick52467.2023.10244327. <a href="https://researchgate.net/publication/373884049_Visual_close-range_Navigation_and_Docking_of_Underwater_Vehicles">ResearchGate</a></li>
+    <li id="ref-8">Guoqiang Tang et al. “Relative Localization and Dynamic Tracking of Underwater Robots Based on 3D-AprilTag.” JMSE 2025. DOI: 10.3390/jmse13050833. <a href="https://www.mdpi.com/2077-1312/13/5/833">MDPI</a></li>
+    <li id="ref-9">Fanyi Meng et al. “DeepTurbid: Underwater Marker Detection and Pose Estimation in Turbid Conditions.” Information Fusion 126, 103568. DOI: 10.1016/j.inffus.2025.103568. <a href="https://www.semanticscholar.org/paper/DeepTurbid%3AUnderwater-marker-detection-and-pose-in-Meng-Cong/375fe1ed3cbbf75b51f62ce377763f5aa73ca391">Semantic Scholar</a> / <a href="https://www.researchgate.net/publication/393955818_DeepTurbidUnderwater_Marker_Detection_and_Pose_Estimation_in_Turbid_Conditions">ResearchGate</a></li>
+    <li id="ref-10">Tali Treibitz et al. “Flat Refractive Geometry.” TPAMI 2012. DOI: 10.1109/TPAMI.2011.105. <a href="https://pubmed.ncbi.nlm.nih.gov/21576744/">PubMed</a> / <a href="https://csms.haifa.ac.il/profiles/tTreibitz/webfiles/flat_refractive_geometry_PAMI_2012.pdf">PDF</a></li>
+    <li id="ref-11">Alexander Jordt-Sedlazeck, Reinhard Koch. “Refractive Calibration of Underwater Cameras.” ECCV 2012. <a href="https://www.geomar.de/fileadmin/personal/fb2/mg/ajordt/finalEccv.pdf">PDF</a></li>
+    <li id="ref-12">Tomasz Łuczyński, Max Pfingsthorn, Andreas Birk. “The Pinax-Model for Accurate and Efficient Refraction Correction of Underwater Cameras in Flat-Pane Housings.” Ocean Engineering 2017. DOI: 10.1016/j.oceaneng.2017.01.029. <a href="https://robotics.constructor.university/code-data/code-pinax/">Project page</a> / <a href="https://github.com/tomluc/Pinax-camera-model">GitHub</a></li>
+    <li id="ref-13">Sebastian Håner, Kalle Åström. “Absolute Pose for Cameras Under Flat Refractive Interfaces.” CVPR 2015. DOI: 10.1109/CVPR.2015.7298749. <a href="https://openaccess.thecvf.com/content_cvpr_2015/papers/Haner_Absolute_Pose_for_2015_CVPR_paper.pdf">CVF PDF</a> / <a href="https://github.com/sebhaner/refractive_pose">Code</a></li>
+    <li id="ref-14">Xiao Hu, François Lauze, Kim S. Pedersen. “Refractive Pose Refinement.” IJCV 2023. DOI: 10.1007/s11263-023-01763-4. <a href="https://orbit.dtu.dk/en/publications/refractive-pose-refinement-generalising-the-geometric-relation-be">DTU</a> / <a href="https://github.com/diku-dk/RefractiveSfM">Code</a></li>
+    <li id="ref-15">Felix Seegräber et al. “A Calibration Tool for Refractive Underwater Vision.” arXiv 2024. <a href="https://arxiv.org/html/2405.18018v2">arXiv</a> / <a href="https://github.com/MDSKiel/calibmar">CalibMar</a></li>
+    <li id="ref-16">Mengkun She et al. “Refractive COLMAP: Refractive Structure-from-Motion Revisited.” IROS 2024. <a href="https://arxiv.org/html/2403.08640v1">arXiv</a> / <a href="https://github.com/MDSKiel/colmap_underwater">GitHub mirror</a></li>
+    <li id="ref-17">Mohit Singh, Kostas Alexis. “Online Refractive Camera Model Calibration in Visual Inertial Odometry.” IROS 2024. DOI: 10.1109/IROS58592.2024.10802302. <a href="https://ntnu-arl.github.io/refractive-camera-model-in-vio/">Project page</a> / <a href="https://github.com/ntnu-arl/reaqrovio">Code</a></li>
+    <li id="ref-18">AprilRobotics. AprilTag 3 official implementation. <a href="https://github.com/AprilRobotics/apriltag">GitHub</a> / <a href="https://april.eecs.umich.edu/software/apriltag">Project page</a></li>
+    <li id="ref-19">christianrauch/apriltag_ros. ROS2 AprilTag detection node. <a href="https://github.com/christianrauch/apriltag_ros">GitHub</a></li>
+    <li id="ref-20">CASIA-RoboticFish/FBUS-EKF. Fiducial-based underwater stereo visual-inertial localization with refraction correction. <a href="https://github.com/CASIA-RoboticFish/FBUS-EKF">GitHub</a></li>
+    <li id="ref-21">ptrmu/fiducial_vlam. ROS2 fiducial marker VLAM. <a href="https://github.com/ptrmu/fiducial_vlam">GitHub</a></li>
+    <li id="ref-22">clydemcqueen/orca3. BlueROV2 ROS2/Gazebo stack. <a href="https://github.com/clydemcqueen/orca3">GitHub</a></li>
+    <li id="ref-23">ntnu-arl/reaqrovio. Refractive Aquatic ROVIO. <a href="https://github.com/ntnu-arl/reaqrovio">GitHub</a></li>
+    <li id="ref-24">MDSKiel/colmap_underwater. Refractive COLMAP. <a href="https://github.com/MDSKiel/colmap_underwater">GitHub</a> / <a href="https://cau-git.rz.uni-kiel.de/inf-ag-koeser/colmap_underwater">GitLab</a></li>
+    <li id="ref-25">MDSKiel/calibmar. Refractive underwater camera calibration tool. <a href="https://github.com/MDSKiel/calibmar">GitHub</a> / <a href="https://cau-git.rz.uni-kiel.de/inf-ag-koeser/calibmar">GitLab</a></li>
+    <li id="ref-26">tomluc/Pinax-camera-model. Pinax model code release. <a href="https://github.com/tomluc/Pinax-camera-model">GitHub</a></li>
+    <li id="ref-27">jacobs-robotics/uw-calibration-pinax. Underwater Camera Calibration with CamOdoCal + Pinax. <a href="https://github.com/jacobs-robotics/uw-calibration-pinax">GitHub</a></li>
+    <li id="ref-28">sebhaner/refractive_pose. Absolute pose under flat refractive interfaces. <a href="https://github.com/sebhaner/refractive_pose">GitHub</a></li>
+    <li id="ref-29">diku-dk/RefractiveSfM. Refractive pose refinement / SfM code. <a href="https://github.com/diku-dk/RefractiveSfM">GitHub</a></li>
+    <li id="ref-30">fanyi-meng/DeepTurbid. Underwater marker detection and pose estimation in turbid conditions. <a href="https://github.com/fanyi-meng/DeepTurbid">GitHub</a></li>
+    <li id="ref-31">AcTag documentation. Opti-acoustic fiducial markers for underwater localization and mapping. <a href="https://actag.readthedocs.io/">Docs</a> / <a href="https://robots.et.byu.edu/jmangelson/pubs/2023/Norman23iros.pdf">Paper PDF</a></li>
+  </ol>
+</main>
+</body>
+</html>

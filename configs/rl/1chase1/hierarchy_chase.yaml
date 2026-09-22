@@ -1,0 +1,47 @@
+base_config: hierarchy_chase_physical_wrench_allocator_1chase1
+
+experiment:
+  name: 1chase1_hierarchy_chase_physical_wrench_allocator
+  seed: 42
+  tags:
+    - rl
+    - single_agent
+    - 1chase1
+    - hierarchy
+    - chase
+    - traditional_pid
+    - physical_wrench_allocator
+    - observation14
+  output_dir: artifacts/runs/rl/1chase1/hierarchy_chase_physical_wrench_allocator
+
+env:
+  unity:
+    env_base_port: 1600
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 600
+    parallel_mode: multi_area
+
+  train:
+    num_envs: 32
+    time_scale: 10.0
+  eval:
+    num_envs: 4
+    time_scale: 10.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    overwrite: true
+
+# 当前 base config 已经按 32 train env / 4 eval env 对齐：
+#   rollout = 32 * 512 = 16384 steps/update
+#   batch_size = 1024
+#   eval_freq = 20000
+#   checkpoint_freq = 100000
+#
+# 1Chase1 hierarchy chase observation contract:
+#   14D standard DirectLocal14 chase obs is the only high-level policy input.
+#   Low-level PID receives the high-level 3D body-frame subgoal action directly,
+#   not an observation suffix.

@@ -1,0 +1,29 @@
+experiment:
+  name: finsrov_hold_for_position_skrl
+  seed: 42
+  tags: [isaaclab, finsrov, hold_for_position, skrl]
+  output_dir: null
+
+isaaclab:
+  path: ${ISAACLAB_PATH}
+  task: FinsSim-FinsROV-HoldForPosition-v0
+  rl_library: skrl
+  cuda_visible_devices: "1"
+  device: cuda:0
+  num_envs: 2048
+  max_iterations: 400
+  headless: true
+  video: false
+  hydra_overrides: []
+
+train:
+  # SKRL loads this as a warm-start agent checkpoint, not an RSL-RL resume.
+  resume_checkpoint: null
+
+play:
+  # Set to an SKRL checkpoint below logs/skrl/ to replay.
+  checkpoint: null
+  num_envs: 1
+  headless: false
+  real_time: false
+  video: false

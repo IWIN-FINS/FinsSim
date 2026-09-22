@@ -1,0 +1,97 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    backend_name: isaaclab_warpauv_poshold
+    # Historical Lab 2 checkpoint. It uses legacy_warpauv_v2 / wxyz semantics only.
+    checkpoint_path: "./simulators/isaaclab/FinsSimIsaacLab/runtime/legacy_checkpoints/warpauv_v2_poshold_dr_2024-09-13.pt"
+    device: auto
+    control_rate_hz: 20.0
+    # Must be launched through motion_controller.launch.py. raw_fusion starts
+    # controller_state_adapter, which converts pool-world fused state and
+    # forwards /finsrov/state/status to /finsrov/controller/state/status.
+    # `ros2 run ... motion_controller` alone does not start that adapter.
+    state_input_mode: raw_fusion
+
+    # The Isaac task's 17D observation is built from the same controller state.
+    # A goal quaternion is used as the Isaac policy's first four inputs.
+    use_target_orientation: true
+    require_target_orientation: false
+    position_tolerance: 0.10
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 2.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    # ROS/state frame conversion already used by the FinsROV controller.
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    # Isaac 6-action -> Isaac polynomial thrust -> Isaac virtual wrench
+    # -> capability scaling -> current FinsROV ThrustAllocator -> 8 force-N values.
+    thruster_output_mode: isaaclab_virtual_wrench_force_n
+    thruster_output_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    policy_action_rate_limit_per_sec: 4.0
+
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+
+    wrench6d:
+      # IsaacLab still uses its historical A-matrix adapter below.
+      allocation_mode: empirical_thruster_mixer
+      allocator_control_linear_range: 10.0
+      allocator_control_axis_ranges: [10.0, 10.0, 10.0, 0.1, 0.1, 0.1]
+      allocator_allocation_mode: empirical_thruster_mixer
+
+    isaaclab:
+      # Map the Isaac action envelope into the current allocator's nominal
+      # physical ranges. These values are the first safe deployment baseline,
+      # not a hydrodynamic calibration.
+      auto_scale_from_envelope: true
+      # [Fx, Fy, Fz, Mx, My, Mz]
+      # [forward, up, left, roll, yaw, pitch]
+      fins_reference_wrench: [10.0, 10.0, 10.0, 0.0, 0.01, 0.0]
+      virtual_to_fins_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+      # Isaac: [Fx,Fy,Fz,Mx,My,Mz] = [forward,left,up,roll,pitch,yaw]
+      # FinsROV: [Fx,Fy,Fz,Mx,My,Mz] = [forward,up,left,roll,yaw,pitch].
+      # The up/left exchange is a reflection. Force is a polar vector, while
+      # torque is axial, hence the additional -1 torque signs below.
+      force_axis_permutation: [0, 2, 1]
+      force_axis_signs: [1.0, 1.0, 1.0]
+      torque_axis_permutation: [0, 2, 1]
+      torque_axis_signs: [-1.0, -1.0, -1.0]
+
+    odom_topic: ""
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+    debug_observation_topic: /motion_controller/debug/observation
+    debug_action_topic: /motion_controller/debug/action
+    debug_wrench6d_topic: /motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /motion_controller/debug/thruster_command
+    debug_policy_info_topic: /motion_controller/debug/policy_info
+
+    stuck_recovery:
+      enabled: false

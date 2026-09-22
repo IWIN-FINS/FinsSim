@@ -1,0 +1,86 @@
+# Deploy the existing 8-thruster PPO checkpoint through a physical wrench
+# projection. This does not reinterpret the PPO output as a 6D policy action:
+#
+# PPO 8D action -> original force-N semantics -> B @ force-N -> wrench_scale
+# -> physical_wrench_allocator -> final 8 force-N commands.
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    backend_name: ppo_control_for_pose
+    #checkpoint_path: "./artifacts/runs/rl/hold_for_position/eight_thruster/ppo_control_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_dr/checkpoints/best_model.zip"
+    checkpoint_path: "./artifacts/runs/rl/hold_for_position/eight_thruster/ppo_control_for_hold_position_fossen_parallel_1024_30s_learn_to_swim_nodr_maxforce_mode1/checkpoints/best_model.zip"
+    # checkpoint_path: "./artifacts/runs/rl/hold_for_position/eight_thruster/ppo_hold_for_position_equivalent_box_parallel_1024_30s_v2/checkpoints/best_model.zip"
+    device: cuda
+    control_rate_hz: 10.0
+    policy_action_rate_limit_per_sec: 0.75
+    position_tolerance: 0.1
+    orientation_tolerance_deg: 10.0
+    velocity_tolerance: 0.05
+    use_target_orientation: true
+    stop_on_goal_reached: true
+    goal_reach_hold_time_sec: 10.0
+    controller_frame_id: controller_world
+    control_mode: ros_manual
+    control_mode_topic: /motion_controller/control_mode
+
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    ros_to_controller_position_offset: [0.0, 0.0, 0.0]
+
+
+    thruster_topic: /finsrov/thrusters_out
+    pwm_topic: /finsrov/thrusters_out
+    thruster_output_mode: thruster8_reprojected_physical_wrench_force_n
+    # The final physical allocator result is already force-N. Keep this at one;
+    # source PPO deployment gains belong in thruster8_wrench_projection below.
+    thruster_output_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+
+    # Reproduce the original ppo_control_for_pose_dr force gains while
+    # constructing the source 8-thruster force vector for B @ force-N.
+    thruster8_wrench_projection:
+      input_thruster_scale: [1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5]
+
+    # Policy order is [surge, sway, heave, roll, pitch, yaw]. The B projection
+    # is body order [Fx, Fy, Fz, Mx, My, Mz]; the controller applies the needed
+    # reorder before scaling and then uses this physical allocator.
+    wrench6d:
+      allocation_mode: physical_wrench_allocator
+      policy_axis_order: legacy_surge_sway_heave
+      wrench_limits: [19.528527, 18.415027, 22.501886, 3.863995, 3.079985, 7.080833]
+      wrench_scale: [0.1, 0.1, 0.1, 0.0, 0.0, 0.05]
+      # wrench_scale: [1.0, 1.0, 1.0, 0.0, 0.0, 1.0]
+      # wrench_scale: [1.0, 1.0, 1.0, 0.0, 0.0, 1.0]
+
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    state_timeout_sec: 0.5
+    allowed_vision_modes: [fresh, coast]
+
+    command_position_world_topic: /motion_controller/command/position_controller_world
+    command_position_body_topic: /motion_controller/command/position_controller_body
+    command_pose_body_topic: /motion_controller/command/pose_controller_body
+    command_velocity_body_topic: /motion_controller/command/velocity_controller_body
+    command_cancel_topic: /motion_controller/command/cancel
+    reset_topic: /finsrov/reset
+    reset_service_name: /motion_controller/reset_vehicle
+    status_active_pose_topic: /motion_controller/status/active_pose
+    status_error_body_topic: /motion_controller/status/error_body
+    status_reached_topic: /motion_controller/status/reached
+    debug_observation_topic: /motion_controller/debug/observation
+    debug_action_topic: /motion_controller/debug/action
+    debug_wrench6d_topic: /motion_controller/debug/wrench6d
+    debug_thruster_command_topic: /motion_controller/debug/thruster_command
+    debug_policy_info_topic: /motion_controller/debug/policy_info
+
+    pose16_rot6d:
+      position_scale: 3.0
+      linear_velocity_scale: [1.0, 1.0, 1.0]
+      angular_velocity_scale: [1.0, 1.0, 1.0]
+      velocity_clip: 2.0

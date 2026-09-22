@@ -1,0 +1,31 @@
+# Static 3Chase1 baseline. The Python guidance consumes the 30D local actor
+# observation and sends the resulting body subgoal through the same PID ->
+# physical_wrench_allocator -> 8D thruster chain as hierarchical MAPPO.
+base_config: chasing_3_chase_1_traditional_formation_baseline
+
+experiment:
+  name: traditional_formation_pid_wrench_eval
+  seed: 42
+  tags: [marl, 3chase1, baseline, formation, traditional_pid, physical_wrench_allocator, eval]
+  output_dir: artifacts/evals/marl/3chase1/baseline/traditional_formation_pid_wrench
+
+env:
+  unity:
+    env_path: artifacts/unity_builds/marl/linux/FinsROV/3Chase1_headless/3Chase1.x86_64
+    env_base_port: 1810
+    parallel_mode: multi_area
+    no_graphics: false
+    timeout_wait: 600
+  train:
+    num_envs: 1
+    time_scale: 1.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+    num_episodes: 10
+
+trainer:
+  backend: marl
+  overrides:
+    device: cuda

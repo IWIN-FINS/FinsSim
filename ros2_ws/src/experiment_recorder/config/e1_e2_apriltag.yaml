@@ -1,0 +1,67 @@
+schema_version: 1
+description: >-
+  E1 online AprilTag horizontal-position recording and E2 offline ablation.
+  This file records the resolved experiment defaults and startup checklist;
+  it never enables hardware or launches processes automatically.
+
+experiment:
+  online_id: E1
+  offline_id: E2
+  recorder_profile: apriltag
+  output_root: ros2_ws/data/experiments/E1
+  truth_frame: pool_world
+  truth_measurement_method: surveyed_body_reference
+  position_count: 12
+  repeats_per_position: 3
+  seconds_per_position: 15 
+  truth_file: external_truth/truth_xy.csv
+
+recording:
+  # <= 0 means record until the operator presses Ctrl-C after the static pose.
+  duration_sec: 0
+  max_bag_duration_sec: 0
+  storage: sqlite3
+  compression: none
+
+# These are declarative startup references for the operator.  The convenience
+# CLI only starts rosbag2; it does not execute any of these commands.
+startup:
+  hardware_bridge:
+    package: hardware_bridge
+    launch: hardware_bridge.launch.py
+    params_file: ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+    enabled: false
+  apriltag:
+    package: perception
+    launch: refractive_apriltag.launch.py
+    detector_params: ros2_ws/src/perception/config/direct_apriltag_rgb.yaml
+    refractive_params: ros2_ws/src/perception/config/refractive_apriltag_rgb.yaml
+    pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+  state_fusion:
+    package: state_estimation
+    launch: state_fusion.launch.py
+    params_file: ros2_ws/src/state_estimation/config/state_fusion.yaml
+    pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+
+# Files hashed into manifest.json for every E1 session.  Relative paths are
+# resolved from the FinsSim repository root.
+configs:
+  state_fusion: ros2_ws/src/state_estimation/config/state_fusion.yaml
+  extrinsics: ros2_ws/src/state_estimation/config/state_fusion_extrinsics.yaml
+  pool_world: ros2_ws/src/state_estimation/config/pool_world.yaml
+  apriltag_rgb: ros2_ws/src/perception/config/direct_apriltag_rgb.yaml
+  refractive_apriltag_rgb: ros2_ws/src/perception/config/refractive_apriltag_rgb.yaml
+
+e2:
+  source_session: E1
+  methods:
+    - pinhole_multi_tag
+    - snell_constrained
+    - fusion
+  output_dir: ros2_ws/data/artifacts/E2_apriltag_ablation
+  evaluated_dimensions:
+    - pool_world_x
+    - pool_world_y
+  excluded_dimensions:
+    - depth
+    - yaw

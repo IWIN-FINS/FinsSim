@@ -1,0 +1,29 @@
+experiment:
+  name: finsrov_t3_moving_target_rsl_rl
+  seed: 42
+  tags: [isaaclab, finsrov, t3, moving_target, rsl_rl]
+  output_dir: null
+
+isaaclab:
+  path: ${ISAACLAB_PATH}
+  task: FinsSim-FinsROV-T3-MovingTarget-v0
+  rl_library: rsl_rl
+  cuda_visible_devices: "1"
+  device: cuda:0
+  num_envs: 2048
+  max_iterations: 400
+  headless: true
+  video: false
+  hydra_overrides: []
+
+train:
+  # Set to an RSL-RL checkpoint path to resume; leave null for a new run.
+  resume_checkpoint: null
+
+play:
+  # Set to the generated model_*.pt path to replay a trained T3 policy.
+  checkpoint: null
+  num_envs: 1
+  headless: false
+  real_time: true
+  video: false

@@ -1,0 +1,41 @@
+# Requires the matching parallel Unity Player built with HoldForPosition
+# MaxStep=750 (15 s at 50 Hz physics / 10 Hz policy decisions).
+# 16,384,000 aggregate transitions / 150 policy steps per episode gives
+# approximately 109,227 independent DR episode samples, matching the
+# Isaac WarpAUV 400-iteration comparison target.
+base_config: ppo_wrench_for_pose_empirical_thruster_mixer
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_parallel_2048_15s
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, fossen6dof, training_area_replicator, dr_15s]
+  output_dir: artifacts/runs/rl/hold_for_position/wrench/ppo_wrench_for_hold_position_fossen_parallel_2048_15s
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_15s_10Hz_Server/HoldForPosition_Parallel_15s.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 35105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+  train:
+    num_envs: 2048
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 10.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    n_steps: 64
+    batch_size: 8192
+    n_epochs: 10
+    total_timesteps: 16384000
+    # Aggregate transition intervals: 5% save and 2% independent evaluation.
+    checkpoint_freq: 819200
+    eval_freq: 327680

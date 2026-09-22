@@ -1,0 +1,64 @@
+base_config: chasing_3_chase_1_end_to_end
+
+experiment:
+  name: finsrov_3chase1_simple_chase
+  seed: 42
+  tags:
+    - finsrov
+    - 3chase1
+    - simple_reward
+    - simple_chase
+
+unity:
+  env_path: artifacts/unity_builds/marl/linux/FinsROV/3Chase1_headless/3Chase1.x86_64
+  env_base_port: 7600
+  num_envs: 8
+  time_scale: 10.0
+  no_graphics: true
+  timeout_wait: 360
+  environment_parameters:
+    finsim_3c1.lesson_id: 0
+
+    # 捕获成功条件保持不变：UUV 接近 prey 即捕获。
+    # 0=NetSurfaceDistance, 1=NetCollision, 2=UuvProximity, 3=NetCollisionOrUuvProximity
+    finsim_3c1.capture.criterion: 2
+    finsim_3c1.capture.net_surface_distance: 1.20
+    finsim_3c1.capture.net_surface_hold_time: 0.00
+    finsim_3c1.capture.uuv_distance: 1.50
+
+    # 1=SimpleChasePrey，只奖励追近 prey；终止捕获奖励仍由 CatchAreaManager 判定。
+    finsim_3c1.reward.mode: 1
+    finsim_3c1.reward.chaser_capture: 20.0
+    finsim_3c1.reward.fish_capture: -20.0
+    finsim_3c1.reward.chaser.step_penalty: -0.0005
+    finsim_3c1.reward.chaser.simple_chase_distance: 0.04
+    finsim_3c1.reward.chaser.simple_chase_progress: 0.20
+    finsim_3c1.reward.chaser.simple_chase_distance_range: 8.0
+
+    # 为切换到 HerdingNet 保留与 curriculum 一致的尺度；mode=1 时不参与主奖励。
+    finsim_3c1.reward.chaser.fish_closing: 0.08
+    finsim_3c1.reward.chaser.netter_spacing: 0.015
+    finsim_3c1.reward.chaser.netter_spacing_progress: 0.040
+    finsim_3c1.reward.chaser.herder_fish_closing: 0.06
+    finsim_3c1.reward.chaser.herding_progress: 0.12
+    finsim_3c1.reward.chaser.angular_velocity_penalty: 0.002
+    finsim_3c1.reward.chaser.linear_velocity_penalty: 0.0005
+    finsim_3c1.reward.chaser.action_magnitude_penalty: 0.001
+    finsim_3c1.reward.chaser.action_delta_penalty: 0.002
+    finsim_3c1.reward.prey.survival: 0.0002
+    finsim_3c1.reward.prey.average_separation_progress: 0.02
+    finsim_3c1.reward.prey.nearest_threat_progress: 0.05
+    finsim_3c1.prey.move_speed: 0.25
+    finsim_3c1.prey.vertical_speed_scale: 0.15
+
+curriculum:
+  enabled: false
+
+trainer:
+  backend: marl
+  overrides:
+    critic_variant: critic_multihead
+    total_timesteps: 10000000
+    batch_size: 64
+    num_eval_envs: 4
+    overwrite: true

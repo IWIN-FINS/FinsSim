@@ -1,0 +1,75 @@
+base_config: hierarchy_chase_physical_wrench_allocator_1chase1
+
+experiment:
+  name: 1chase1_hierarchy_distance_only_physical_wrench_allocator
+  seed: 42
+  tags:
+    - rl
+    - single_agent
+    - 1chase1
+    - hierarchy
+    - traditional_pid
+    - physical_wrench_allocator
+    - reward_distance_only
+  output_dir: artifacts/runs/rl/1chase1/hierarchy_distance_only_physical_wrench_allocator
+
+reward:
+    protocol: one_chase_one_reward_v1
+    mode: distance_only
+    parameters:
+      distance_scale: 0.10
+      distance_range: 8.0
+      per_step_penalty: -0.0005
+      angular_velocity_penalty_scale: 0.001
+      action_energy_penalty_scale: 0.0005
+      action_delta_penalty_scale: 0.0005
+      success_reward: 50.0
+      timeout_penalty: -5.0
+      out_of_bounds_penalty: -1.0
+      capture_distance: 0.8
+      stable_capture_relative_speed: 0.35
+      stable_capture_steps_required: 5
+
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/FinsROV/1Chase1_headless/1Chase1.x86_64
+    env_base_port: 1700
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    seed: 42
+    environment_parameters:
+      finsim_1chase1_observation_mode: 14
+    unity_additional_args:
+      - -fins-1chase1-mode
+      - direct14
+    parallel_mode: multi_area
+
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    num_episodes: 256
+    time_scale: 1.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    overwrite: true
+    n_steps: 64
+    # 64 * 1024 / 8192 = 8 PPO mini-batches per epoch.
+    batch_size: 8192
+    n_epochs: 10
+    total_timesteps: 32768000
+    # Aggregate environment transitions: evaluate every 0.5%, save every 2.5%.
+    checkpoint_freq: 819200
+    eval_freq: 163840
+
+# Reward semantics:
+# - 只奖励当前距离越近越好，不使用距离增量/朝向/接近速度 shaping。
+# - 捕获成功条件不变：距离 + 相对速度稳定若干步。
+# - PPO 仍输出 body-frame 目标点增量，低层 traditional PID 负责到目标点。
+# - 1024 个训练 area 和 256 个异步 eval area 都位于各自单独的 Unity Player 中。

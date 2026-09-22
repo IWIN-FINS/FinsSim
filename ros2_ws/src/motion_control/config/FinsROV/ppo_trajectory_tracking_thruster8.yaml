@@ -1,0 +1,40 @@
+motion_controller:
+  ros__parameters:
+    vehicle_name: FinsROV
+    backend_name: ppo_trajectory_tracking_thruster8
+    # Keep this path identical to controllers.PPO_THRUSTER8.checkpoint_path
+    # in experiment_recorder/config/t2_hardware_experiment.yaml.  This
+    # lets the runner preserve one frozen training artifact without requiring
+    # a redundant CLI --checkpoint override for every T2 trial.
+    checkpoint_path: "./artifacts/runs/rl/trajectory_tracking/8thruster/ppo_trajectory_tracking_fossen_parallel_30s/checkpoints/best_model.zip"
+    device: cuda
+    control_rate_hz: 10.0
+    control_mode: ros_manual
+    controller_frame_id: controller_world
+    ros_to_controller_basis_indices: [0, 2, 1]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    thruster_topic: /finsrov/thrusters_out
+    thruster_output_mode: force_n
+    thruster_force_limits_n:
+      positive: [8.4749, 7.3809, 7.3809, 8.4749, 7.3809, 8.4749, 7.3809, 8.4749]
+      negative: [7.9750, 5.7618, 5.7618, 7.9750, 5.7618, 7.9750, 5.7618, 7.9750]
+    thruster_output_scale: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    pose_topic: /finsrov/controller/pose
+    imu_topic: /finsrov/controller/imu
+    depth_topic: /finsrov/controller/depth
+    dvl_topic: /finsrov/controller/dvl
+    state_status_topic: /finsrov/controller/state/status
+    require_fusion_ready: true
+    allowed_vision_modes: [fresh, coast]
+    command_trajectory_topic: /motion_controller/command/trajectory
+    command_cancel_topic: /motion_controller/command/cancel
+    debug_observation_topic: /motion_controller/debug/observation
+    debug_action_topic: /motion_controller/debug/policy_action
+    debug_thruster_command_topic: /motion_controller/debug/thruster_command
+    debug_trajectory_reference_topic: /motion_controller/debug/trajectory_reference
+    trajectory30:
+      preview_step_sec: 0.1
+      preview_offset_scale: 3.0
+      linear_velocity_scale: 1.0
+      angular_velocity_scale: 1.0
+      observation_clip: 2.0

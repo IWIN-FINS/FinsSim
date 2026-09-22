@@ -1,0 +1,34 @@
+base_config: ppo_control_for_pose
+
+experiment:
+  name: ppo_control_for_hold_position_fossen_parallel_2048
+  seed: 42
+  tags: [ppo, hold_for_position, eight_thruster, fossen6dof, training_area_replicator]
+  output_dir: artifacts/runs/rl/hold_for_position/eight_thruster/ppo_control_for_hold_position_fossen_parallel_1024
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_30s_10Hz_Server/HoldForPosition_Parallel_30s.x86_64
+    env_base_port: 33105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 600
+    parallel_mode: multi_area
+
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    n_steps: 64
+    n_epochs: 10
+    batch_size: 8192
+    total_timesteps: 32768000
+    checkpoint_freq: 819200
+    eval_freq: 163840

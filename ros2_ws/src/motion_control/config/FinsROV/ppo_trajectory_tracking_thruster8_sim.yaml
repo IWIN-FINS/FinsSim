@@ -1,0 +1,51 @@
+/**:
+  ros__parameters:
+    vehicle_name: FinsROV
+    state_input_mode: sim_truth
+    # T2 evaluation time is driven by Unity's accelerated /clock.
+    use_sim_time: true
+    lockstep_enabled: true
+    lockstep_clock_topic: /clock
+    lockstep_ack_topic: /sim/motion_controller/debug/control_tick_complete
+    backend_name: ppo_trajectory_tracking_thruster8
+    # A locally auditable default for smoke tests.  Formal invocations may
+    # override it with run_t2_simulation --checkpoint; do not replace this
+    # path with the hardware profile, whose namespace and output envelope
+    # differ from this /sim profile.
+    checkpoint_path: "./artifacts/runs/rl/trajectory_tracking/8thruster/ppo_trajectory_tracking_fossen_parallel_30s/checkpoints/best_model.zip"
+    device: cuda
+    control_rate_hz: 10.0
+    control_mode: ros_manual
+    controller_frame_id: controller_world
+    # Unity VehicleRosBridge already publishes controller-body axes.
+    ros_to_controller_basis_indices: [0, 1, 2]
+    ros_to_controller_basis_signs: [1.0, 1.0, 1.0]
+    thruster_topic: /sim/finsrov/thrusters_out
+    thruster_output_mode: force_n
+    thruster_force_limits_n:
+      positive: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+      negative: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+    pose_topic: /sim/finsrov/controller/pose
+    imu_topic: /sim/finsrov/controller/imu
+    depth_topic: /sim/finsrov/controller/depth
+    dvl_topic: /sim/finsrov/controller/dvl
+    # sim_truth_state_status publishes this readiness gate; keep it in /sim.
+    status_topic: /sim/finsrov/controller/state/status
+    state_status_topic: /sim/finsrov/controller/state/status
+    status_stamped_topic: /sim/finsrov/controller/state/status_stamped
+    require_fusion_ready: true
+    allowed_vision_modes: [fresh, coast]
+    command_trajectory_topic: /sim/motion_controller/command/trajectory
+    command_cancel_topic: /sim/motion_controller/command/cancel
+    debug_observation_topic: /sim/motion_controller/debug/observation
+    debug_action_topic: /sim/motion_controller/debug/policy_action
+    debug_thruster_command_topic: /sim/motion_controller/debug/thruster_command
+    debug_trajectory_reference_topic: /sim/motion_controller/debug/trajectory_reference
+    # Header-stamped mirror used by T2 simulation analysis.
+    debug_trajectory_reference_stamped_topic: /sim/motion_controller/debug/trajectory_reference_stamped
+    trajectory30:
+      preview_step_sec: 0.1
+      preview_offset_scale: 3.0
+      linear_velocity_scale: 1.0
+      angular_velocity_scale: 1.0
+      observation_clip: 2.0

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finssim-core"
+version = "0.1.0"
+description = "Shared lightweight config and runtime utilities for FinsSim."
+license = "Apache-2.0"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "pyyaml>=6,<7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finssim_core"]

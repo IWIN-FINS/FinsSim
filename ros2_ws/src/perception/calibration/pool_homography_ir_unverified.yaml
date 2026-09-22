@@ -1,0 +1,22 @@
+# Legacy IR homography retained only to avoid applying the RGB E2 calibration
+# to a different camera. It has not been validated for the 2560x1440 IR
+# camera and must be replaced by an IR-specific calibration before its
+# world_xy_yaw debug output is used quantitatively.
+schema_version: 1
+description: Legacy unverified IR pixel-to-world mapping; not calibrated by E2 RGB data.
+image_points:
+  - [1280, 720]
+  - [1280, 0]
+  - [0, 720]
+  - [0, 0]
+  - [640, 360]
+world_points:
+  - [1.0248, 0.4864]
+  - [1.0248, 1.3648]
+  - [-1.1256, 0.4864]
+  - [-1.1256, 1.3648]
+  - [-0.0504, 0.9256]
+calibration_scope:
+  camera: finsrov_overhead_ir_camera
+  status: unverified_legacy
+  not_valid_for: quantitative localisation, refractive 6D pose, or state fusion

@@ -1,0 +1,21 @@
+# Minimal top-level example for `finssim marl train -c configs/marl/example.yaml`.
+# The named backend configuration lives in python/finssim_marl.
+base_config: chasing_3_chase_1
+
+experiment:
+  name: marl_example
+  seed: 42
+  tags: []
+
+unity:
+  # Set this to a compatible Unity executable before a real training run.
+  env_path: null
+  num_envs: 1
+  env_base_port: 6000
+  port_offset: 0
+  time_scale: 10.0
+  no_graphics: true
+
+trainer:
+  backend: marl
+  overrides: {}

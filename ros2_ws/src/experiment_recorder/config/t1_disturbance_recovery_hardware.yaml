@@ -1,0 +1,173 @@
+schema_version: 1
+experiment_id: E8-T1-DISTURBANCE-RECOVERY
+status: pilot_required_before_formal_freeze
+description: >-
+  Independent centre-point manual-disturbance recovery protocol. This is not a
+  static T1 E6/E7 target-point trial: all repetitions hold only the fixed
+  controller_world target [0.0, -0.5, 0.0, 0.0], wait for one manually induced
+  perturbation, then quantify the measured state recovery.
+
+# Create a new version before changing any value after formal data collection.
+# The source does not measure applied force; claims are therefore restricted to
+# recovery from state-observed manual perturbations, not equal-force rejection.
+
+runner:
+  mode: hardware_e8_manual_state_observed_disturbance_recovery
+  require_explicit_arm_flag: true
+  session_strategy_slugs: {}
+  auto_launch:
+    enabled: true
+    # Keep bridge, AprilTag and state fusion alive across manual trials. The
+    # runner verifies them, starts only the selected motion controller/recorder,
+    # and never enables the bridge without --arm.
+    start_support_stack: false
+    startup_timeout_sec: 30.0
+    startup_settle_sec: 3.0
+    terminate_timeout_sec: 10.0
+    required_support_topics:
+      - /finsrov/pose
+      - /finsrov/imu_link
+      - /finsrov/depth_link
+      - /finsrov/dvl_link
+      - /finsrov/state/status
+    required_controller_topics:
+      - /finsrov/controller/pose
+      - /finsrov/controller/imu
+      - /finsrov/controller/depth
+      - /finsrov/controller/dvl
+      - /finsrov/controller/state/status
+    hardware_bridge:
+      package: hardware_bridge
+      launch_file: hardware_bridge.launch.py
+      params_file: ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+      enabled_without_arm: false
+      enabled_with_arm: true
+    perception:
+      package: perception
+      launch_file: refractive_apriltag.launch.py
+      detector_params: ros2_ws/src/perception/config/direct_apriltag_rgb.yaml
+      refractive_params: ros2_ws/src/perception/config/refractive_apriltag_rgb.yaml
+    state_fusion:
+      package: state_estimation
+      launch_file: state_fusion.launch.py
+      params_file: ros2_ws/src/state_estimation/config/state_fusion.yaml
+    motion_controller:
+      package: motion_control
+      launch_file: motion_controller.launch.py
+      state_input_mode: raw_fusion
+      pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+  runtime_status:
+    log_interval_sec: 1.0
+    pose_stale_after_sec: 0.50
+    allowed_vision_modes: [fresh, coast]
+    # A fusion ``hold`` or ``lost`` freezes/invalidates horizontal vision
+    # state. Do not abort the runner on this visual condition alone while the
+    # motion controller's own gate outputs zero thrust; E8 still cannot arm,
+    # detect, or confirm recovery until state is back in ``fresh`` or
+    # ``coast``. Missing/stale topics or bad IMU/depth state remain fatal.
+    nonfatal_vision_modes: [hold, lost]
+  logging:
+    # Deliberately separate from ros2_ws/data/experiments/hardware/T1 and
+    # ros2_ws/data/experiments/simulation/T1.  E8 is a real-vehicle manual
+    # perturbation protocol, so retain it under the hardware evidence tree.
+    root: ros2_ws/data/experiments/hardware/T1_disturbance
+    recorder_profile: t1
+    event_topic: /finsrov/experiment/event
+  safety:
+    deadman_required: true
+    emergency_stop_required: true
+    bridge_timeout_sec: 0.5
+    emergency_stop:
+      bridge_node: /hardware_bridge
+      bridge_status_topic: /finsrov/hardware/status
+      zero_frames: 6
+      zero_frame_interval_sec: 0.05
+      parameter_timeout_sec: 1.0
+      confirmation_timeout_sec: 2.0
+
+coordinate_contract:
+  state_frame: controller_world
+  water_surface_y_m: 0.0
+  axes:
+    x: surge_position_m
+    y: depth_position_m_up_positive
+    z: sway_position_m
+    yaw: yaw_deg_about_controller_y
+
+# This value is intentionally validated by the E8 runner. It cannot be changed
+# to one of the eight static-T1 points through a CLI override.
+target:
+  id: CENTER_X0_DEPTH_NEG_0_5_Z0_YAW0
+  x_m: 0.0
+  y_depth_m: -0.5
+  z_m: 0.0
+  yaw_deg: 0.0
+
+controllers:
+  PID:
+    storage_subdirectory: PID
+    config_file: ros2_ws/src/motion_control/config/FinsROV/traditional_pid_position_yaw.yaml
+    policy_action_interface: closed_loop_pid_to_bounded_allocator
+  PPO:
+    storage_subdirectory: PPO_WRENCH6
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_wrench_for_pose_physical_wrench_allocator_maxforce.yaml
+    policy_action_interface: normalized_wrench6_to_bounded_allocator
+
+recording:
+  required_config_files:
+    - ros2_ws/src/state_estimation/config/pool_world.yaml
+
+disturbance_protocol:
+  # One CLI invocation defaults to one manual perturbation. Use --trials 5
+  # after the pilot has frozen these thresholds and the physical rig geometry.
+  trials_per_run: 1
+  pre_control_sec: 10.0
+  # At least this many seconds inside arming thresholds are required after the
+  # first 10 s. The terminal prints "may apply" only after this gate passes.
+  ready_hold_sec: 2.0
+  max_ready_wait_sec: 45.0
+  # The runner keeps controlling and printing status while no disturbance is
+  # detected. A finite timeout makes no-detection trials auditable; it is not
+  # silently discarded.
+  max_wait_for_disturbance_sec: 90.0
+  # At least 10 s are always logged after a confirmed disturbance. The runner
+  # continues longer when required to verify the stable-hold criterion.
+  post_detection_min_control_sec: 10.0
+  required_stable_hold_sec: 5.0
+  post_detection_timeout_sec: 45.0
+  # Offline analysis searches this bounded interval for the largest measured
+  # state departure; recovery time is reported from that measured peak.
+  peak_search_sec: 5.0
+  # Each automatic recovery plot retains this much state history before the
+  # detected disturbance event, so its t=0 marker is visible inside the plot.
+  plot_pre_detection_window_sec: 5.0
+  unhealthy_abort_after_sec: 2.0
+
+  # Horizontal displacement-only trigger. A trial detects a manual disturbance
+  # once x OR z has remained at least 0.20 m from the centre target for
+  # persistence_sec. It does not use depth, yaw, linear velocity, angular
+  # velocity, or an unmeasured external-force magnitude.
+  detection:
+    x_error_m: 0.20
+    z_error_m: 0.20
+    persistence_sec: 0.30
+
+  # Used only to decide when manual perturbation is allowed. The four T1
+  # controlled dimensions must be inside these bounds. Finite-difference
+  # velocity and yaw-rate are not readiness gates.
+  arming_thresholds:
+    x_m: 0.10
+    depth_m: 0.20
+    z_m: 0.10
+    yaw_deg: 10.0
+
+  # Used online to continue/finish recovery observation. The offline analyser
+  # reconstructs the final result from raw rosbag timestamps and these frozen
+  # thresholds rather than trusting terminal output alone. Recovery uses only
+  # pose errors; linear velocity and yaw rate are diagnostic outputs, not
+  # completion criteria.
+  recovery_thresholds:
+    x_m: 0.10
+    depth_m: 0.20
+    z_m: 0.10
+    yaw_deg: 10.0

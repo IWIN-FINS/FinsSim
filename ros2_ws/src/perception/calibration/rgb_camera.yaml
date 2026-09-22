@@ -1,0 +1,128 @@
+camera_name: finsrov_overhead_rgb_camera
+image_width: 1280
+image_height: 720
+camera_matrix:
+  rows: 3
+  cols: 3
+  data:
+  - 540.9305201862155
+  - 0.0
+  - 682.2340572295288
+  - 0.0
+  - 540.9305201862155
+  - 348.61355599431334
+  - 0.0
+  - 0.0
+  - 1.0
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data:
+  - 0.029441755939599856
+  - -0.05975546184046912
+  - 0.0008809786701829642
+  - 0.0017914762603378682
+  - 0.012568621044821903
+reprojection_error_px: 0.2825884320581254
+valid_image_count: 38
+input_image_count: 40
+pattern_cols: 17
+pattern_rows: 17
+square_size_m: 0.05
+calibration_flags:
+  free_aspect_ratio: false
+  fix_aspect_ratio: true
+  initial_fov_deg: 90.0
+  zero_tangent_dist: false
+  fix_k3: false
+estimated_fov_deg:
+  horizontal: 99.59074724011596
+  vertical: 67.28910711912054
+dataset_quality:
+  corner_coverage_x: 0.9646695137023926
+  corner_coverage_y: 0.9266025119357639
+  center_coverage_x: 0.686301338672638
+  center_coverage_y: 0.43638136121961807
+  mean_board_span_x_px: 385.7055246453536
+  mean_board_span_y_px: 402.9260342246608
+  board_span_variation_x_px: 150.55963134765625
+  board_span_variation_y_px: 136.97000122070312
+valid_images:
+- calibration_images/rgb_chessboard_1280x720/chessboard_0000.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0002.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0004.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0005.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0006.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0007.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0008.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0009.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0010.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0011.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0012.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0013.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0014.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0015.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0016.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0017.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0018.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0019.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0020.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0021.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0022.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0023.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0024.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0025.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0026.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0027.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0028.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0029.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0030.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0031.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0032.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0033.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0034.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0035.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0036.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0037.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0038.png
+- calibration_images/rgb_chessboard_1280x720/chessboard_0039.png
+per_view_reprojection_errors_px:
+- 0.2870522874024348
+- 0.3366609235156818
+- 0.44369170545960607
+- 0.42695006410166264
+- 0.32195746984501283
+- 0.3183408123537087
+- 0.3138593741993178
+- 0.2402855955356495
+- 0.22160446440018722
+- 0.23183846854696724
+- 0.2407566534477904
+- 0.2505950133223831
+- 0.2639819168257903
+- 0.2730613286581825
+- 0.30976760906266376
+- 0.2936504888040123
+- 0.2896507306529039
+- 0.2634797869069108
+- 0.2537966591858424
+- 0.2579266872712541
+- 0.2326512578280053
+- 0.2349364256431748
+- 0.26547040730204335
+- 0.2608681000026057
+- 0.26396582089788695
+- 0.24970357705863683
+- 0.3378666190700903
+- 0.25930413545857767
+- 0.27821888483490137
+- 0.2712988206168017
+- 0.2829380454680451
+- 0.284205655155563
+- 0.28400503513275654
+- 0.2594008046952856
+- 0.28058148379587255
+- 0.2319104507753915
+- 0.23616525881255376
+- 0.2340012189094945

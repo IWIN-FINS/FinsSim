@@ -1,0 +1,42 @@
+# 30 s / 1024-area HoldForPosition Fossen run with bounded physical wrench allocation.
+# A policy action of +/-1 requests the documented simulation pure-axis capability.
+base_config: ppo_wrench_for_pose_physical_wrench_allocator
+
+experiment:
+  name: ppo_wrench_for_hold_position_fossen_parallel_1024_30s_isaac_reward_physical_wrench_allocator
+  seed: 42
+  tags: [ppo, hold_for_position, wrench_control, physical_wrench_allocator, fossen6dof, training_area_replicator, dr_30s, isaac_reward]
+  output_dir: artifacts/runs/rl/hold_for_position/physical_wrench_allocator/isaac_reward_local_server
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/HoldForPosition_Fossen_Parallel_30s_10Hz_Server/HoldForPosition_Parallel_30s.x86_64
+    parallel_mode: multi_area
+    seed: 42
+    env_base_port: 48105
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 1200
+    environment_parameters:
+      # HoldForPosition.DenseRewardMode.IsaacPositionHold
+      finsim_hold.reward.mode: 2.0
+  train:
+    num_envs: 1024
+    time_scale: 10.0
+  eval:
+    num_envs: 256
+    time_scale: 1.0
+    mode: asynchronous
+
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    n_steps: 64
+    # 64 * 1024 / 8192 = 8 mini-batches per PPO epoch.
+    batch_size: 8192
+    n_epochs: 10
+    total_timesteps: 32768000 # 16384000*2
+    # Evaluate each 1% and save each 5% of this training run.
+    checkpoint_freq: 819200
+    eval_freq: 163840

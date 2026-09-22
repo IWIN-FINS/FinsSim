@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>grpc_ros_adapter</name>
+  <version>0.0.2</version>
+  <description>The package provides a ROS to GRPC bridge.</description>
+
+  <maintainer email="labust@fer.hr">Labust</maintainer>
+
+  <license>Apache-2.0</license>
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <buildtool_depend condition="$ROS_VERSION == 2">ament_python</buildtool_depend>
+  <build_depend condition="$ROS_VERSION == 1">rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_export_depend condition="$ROS_VERSION == 1">rospy</build_export_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+
+  <exec_depend condition="$ROS_VERSION == 1">rospy</exec_depend>
+  <exec_depend condition="$ROS_VERSION == 2">rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>uuv_sensor_msgs</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend condition="$ROS_VERSION == 2">launch</exec_depend>
+  <exec_depend condition="$ROS_VERSION == 2">launch_ros</exec_depend>
+  <exec_depend>python3-grpcio</exec_depend>
+  <exec_depend>python3-protobuf</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+
+  <export>
+    <build_type condition="$ROS_VERSION == 2">ament_python</build_type>
+  </export>
+</package>

@@ -1,0 +1,376 @@
+schema_version: 1
+experiment_id: E10-T2-HARDWARE
+status: draft_geometry_requires_operator_review
+description: >-
+  Single source of truth for FinsROV T2 hardware trajectory experiments. The
+  protocol supports trajectory30 PPO policies and a translation-only
+  traditional position-PID baseline that samples the moving reference.
+
+# Survey and pilot notes are recorded for run provenance, but are advisory:
+# the runner does not block --arm based on this section. Use --dry-run to
+# inspect the full resolved trial plan before hardware execution.
+survey_signoff:
+  required: true
+  approved: true
+  approved_by: ""
+  approved_at: ""
+  notes: >-
+    Replace the candidate workspace and limits below with surveyed values after
+    a dry run and low-authority pilot; retain the review information here.
+
+runner:
+  mode: hardware_t2
+  require_explicit_arm_flag: true
+  auto_launch:
+    enabled: true
+    # Keep physical bridge, perception, and fusion operator-managed by default.
+    start_support_stack: false
+    startup_timeout_sec: 30.0
+    startup_settle_sec: 3.0
+    terminate_timeout_sec: 10.0
+    # Ctrl-C ends the current trial but still waits for rosbag2 finalization
+    # and the automatic offline plots. This is intentionally longer than the
+    # controller-process stop timeout; propulsion is cancelled before it starts.
+    recorder_finalize_timeout_sec: 90.0
+    required_support_topics:
+      - /finsrov/pose
+      - /finsrov/imu_link
+      - /finsrov/depth_link
+      - /finsrov/dvl_link
+      - /finsrov/state/status
+    required_controller_topics:
+      - /finsrov/controller/pose
+      - /finsrov/controller/dvl
+      - /finsrov/controller/depth
+      - /finsrov/controller/state/status
+      - /motion_controller/debug/trajectory_reference
+    hardware_bridge:
+      package: hardware_bridge
+      launch_file: hardware_bridge.launch.py
+      params_file: ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+      enabled_without_arm: false
+      enabled_with_arm: true
+    perception:
+      package: perception
+      launch_file: refractive_apriltag.launch.py
+      detector_params: ros2_ws/src/perception/config/direct_apriltag_rgb.yaml
+      refractive_params: ros2_ws/src/perception/config/refractive_apriltag_rgb.yaml
+    state_fusion:
+      package: state_estimation
+      launch_file: state_fusion.launch.py
+      params_file: ros2_ws/src/state_estimation/config/state_fusion.yaml
+    motion_controller:
+      package: motion_control
+      launch_file: motion_controller.launch.py
+      state_input_mode: raw_fusion
+      pool_world_params_file: ros2_ws/src/state_estimation/config/pool_world.yaml
+  runtime_status:
+    # The runner prints one position/progress/health record at this cadence.
+    # A missing or stale pose/status is reported as ABNORMAL but does not hide
+    # the original rosbag evidence or replace the post-run completion audit.
+    log_interval_sec: 1.0
+    pose_stale_after_sec: 0.50
+  logging:
+    root: ros2_ws/data/experiments
+    recorder_profile: t2
+    event_topic: /finsrov/experiment/event
+    session_output_layout: <run_id>/trials/<session_id>
+  safety:
+    deadman_required: true
+    emergency_stop_required: true
+    # Normal completion keeps the explicitly armed bridge enabled after zero
+    # commands. Ctrl-C and exceptions remain disarming emergency paths.
+    disarm_on_exit: false
+    emergency_stop:
+      bridge_node: /hardware_bridge
+      bridge_status_topic: /finsrov/hardware/status
+      zero_frames: 6
+      zero_frame_interval_sec: 0.05
+      parameter_timeout_sec: 1.0
+      confirmation_timeout_sec: 2.0
+
+coordinate_contract:
+  state_frame: controller_world
+  axes:
+    x: surge_position_m
+    y: depth_position_m_up_positive
+    z: sway_position_m
+  fixed_depth:
+    # controller_world is y-up: y=-0.50 m is a 0.50 m submerged reference.
+    # This is a declared reference initial condition, not a measured-pose gate.
+    y_m: -0.50
+    vy_mps: 0.0
+  declared_initial_placement:
+    # The operator places the ROV at this shallower point before a trial.
+    # It is recorded only: no pose gate or automatic repositioning is applied.
+    y_m: -0.20
+  controlled_dofs: [x, y_depth, z]
+  uncontrolled_dofs: [roll, pitch, yaw]
+
+controllers:
+  PID_POSITION:
+    storage_subdirectory: PID
+    enabled: true
+    experiment_label: candidate_traditional_pid_position_trajectory
+    config_file: ros2_ws/src/motion_control/config/FinsROV/traditional_pid_trajectory_tracking.yaml
+    checkpoint_required: false
+    expected_backend_name: traditional_pid_position
+    expected_observation_mode: pose20
+    expected_observation_dim: 20
+    action_interface: position_pid_to_empirical_canonical_thruster8
+    expected_action_dim: 8
+    controlled_dofs: [x, y_depth, z]
+    uncontrolled_dofs: [roll, pitch, yaw]
+    trajectory_velocity_feedforward: false
+    safety_gate_required_before_formal_trials: true
+
+  PPO_WRENCH6:
+    storage_subdirectory: PPO_WRENCH6
+    enabled: true
+    experiment_label: candidate_ppo_wrench6_trajectory30
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_trajectory_tracking_wrench6.yaml
+    checkpoint_required: true
+    expected_backend_name: ppo_trajectory_tracking_wrench6
+    expected_observation_mode: trajectory30
+    expected_observation_dim: 30
+    action_interface: wrench6_to_physical_allocator_to_canonical_thruster8
+    expected_action_dim: 6
+    policy_action_order: [Fx, Fy, Fz, Mx, My, Mz]
+    # The policy checkpoint remains 6D, but all rotational components are
+    # zero-scaled at the controller boundary for this translation-only T2.
+    active_wrench_components: [Fx, Fy, Fz]
+    disabled_wrench_components: [Mx, My, Mz]
+    safety_gate_required_before_formal_trials: true
+
+  PPO_THRUSTER8:
+    storage_subdirectory: PPO_THRUSTER8
+    enabled: true
+    experiment_label: candidate_ppo_thruster8_trajectory30
+    config_file: ros2_ws/src/motion_control/config/FinsROV/ppo_trajectory_tracking_thruster8.yaml
+    checkpoint_required: true
+    expected_backend_name: ppo_trajectory_tracking_thruster8
+    expected_observation_mode: trajectory30
+    expected_observation_dim: 30
+    action_interface: canonical_thruster8
+    expected_action_dim: 8
+    canonical_thruster_order: [V_LF, V_LB, V_RB, V_RF, H_LF, H_LB, H_RB, H_RF]
+    safety_gate_required_before_formal_trials: true
+
+trajectory_contract:
+  command_topic: /motion_controller/command/trajectory
+  cancel_topic: /motion_controller/command/cancel
+  reference_topic: /motion_controller/debug/trajectory_reference
+  command_type: trajectory_msgs/MultiDOFJointTrajectory
+  frame_id: controller_world
+  point_layout: [time_sec, x_m, y_m, z_m, vx_mps, vy_mps, vz_mps]
+  sample_rate_hz: 10.0
+  require_velocity_in_every_point: true
+  orientation_control: disabled_identity_quaternion_transport
+
+# Candidate geometry only. Values must be revisited after E4 planar response
+# and camera visibility checks; they are not claimed as a calibrated pool model.
+surveyed_workspace:
+  x_m: [-1.20, 1.20]
+  # Candidate envelope must include the declared y=-0.50 m reference depth.
+  # It is not a validated pool limit.
+  y_m: [-0.90, 0.25]
+  z_m: [-0.70, 0.70]
+  clearance_margin_m: 0.20
+  # Half-speed T2 reference envelope. All catalog trajectories below use
+  # twice their original duration, yielding half peak speed and one quarter
+  # peak acceleration under the same smooth time parameterization.
+  maximum_horizontal_speed_mps: 0.15
+  maximum_horizontal_acceleration_mps2: 0.08
+
+trajectories:
+  straight:
+    enabled: true
+    generator: line
+    duration_sec: 30.0
+    # controller_world horizontal x--z plane: (-1.0, -0.4) -> (1.0, 0.4).
+    start_xz_m: [-1.00, -0.40]
+    end_xz_m: [1.00, 0.40]
+
+  straight_pro:
+    enabled: true
+    generator: polyline_xz
+    # A slower four-segment crossed-line path.  Each segment has an
+    # independent smooth start/stop so the ROV does not receive a direction
+    # discontinuity at a waypoint. The half-speed values sum to 90 s.
+    duration_sec: 90.0
+    waypoints_xz_m:
+      - [-1.00, -0.40]
+      - [1.00, 0.40]
+      - [1.00, -0.40]
+      - [-1.00, 0.40]
+      - [-1.00, -0.40]
+    # Diagonal segments use 32 s; vertical return segments use 13 s.
+    segment_durations_sec: [32.0, 13.0, 32.0, 13.0]
+
+  circle:
+    enabled: true
+    generator: circle_xz
+    # Three turns, retimed without changing the three-turn geometry.
+    duration_sec: 137.142857
+    center_xz_m: [0.00, 0.00]
+    radius_m: 0.50
+    turns: 3
+    initial_phase_deg: 0.0
+    direction: counterclockwise
+    target_peak_speed_mps: 0.103083509
+    target_peak_speed_tolerance_mps: 0.0005
+
+  ellipse:
+    enabled: true
+    generator: ellipse_xz_vertex_slow
+    # One counter-clockwise ellipse in the controller_world x--z plane.
+    # It starts at (1.00, 0.00), and its next cardinal vertex is (0.00, 0.40).
+    # The fixed T2 reference depth remains coordinate_contract.fixed_depth.y_m
+    # = -0.50 m (0.50 m below the water surface in this y-up frame).
+    center_xz_m: [0.00, 0.00]
+    semi_major_x_m: 1.00
+    semi_minor_z_m: 0.40
+    turns: 1
+    initial_phase_deg: 0.0
+    direction: counterclockwise
+    # The generator is arc-length aware.  Its local physical speed multiplier
+    # is 1.0 midway between two vertices and 0.50 at every cardinal vertex,
+    # lowering the command through each turn without introducing a waypoint
+    # stop.  The trial still has the common smooth zero-speed start/end.
+    vertex_speed_scale: 0.50
+    # This independent ellipse is retimed to the common half-speed target.
+    # Its duration follows from the declared axes and slowdown profile, and
+    # the generator checks this invariant on every dry-run/execution build.
+    duration_sec: 92.70
+    target_peak_speed_mps: 0.103083509
+    target_peak_speed_tolerance_mps: 0.002
+
+  lemniscate:
+    enabled: true
+    generator: gerono_xz
+    duration_sec: 30.0
+    center_xz_m: [0.00, 0.00]
+    amplitude_x_m: 0.40
+    amplitude_z_m: 0.20
+    initial_phase_deg: 0.0
+    direction: forward
+
+  figure_eight:
+    enabled: true
+    generator: gerono_xz
+    # A separate, large Gerono figure-eight; it does not replace `lemniscate`.
+    # x = 1.0 sin(theta), z = 0.8 sin(theta) cos(theta), so the trace reaches
+    # (+/-1.0, 0.0) and has horizontal cross-axis extrema z = +/-0.40 m.
+    # It starts at the central crossing (0.0, 0.0), enters the positive-x/
+    # positive-z lobe first, then returns through the crossing into the other
+    # lobe. The fixed T2 reference depth remains y=-0.50 m.
+    center_xz_m: [0.00, 0.00]
+    amplitude_x_m: 1.00
+    amplitude_z_m: 0.80
+    initial_phase_deg: 0.0
+    direction: forward
+    # The peak physical reference speed is matched to `ellipse`, not to its
+    # nominal phase rate. This duration is derived for the Gerono geometry and
+    # common smoothstep profile, and is checked at runner build time.
+    duration_sec: 117.085700
+    target_peak_speed_mps: 0.103083509
+    target_peak_speed_tolerance_mps: 0.0005
+
+trial_protocol:
+  controller_selection_required: true
+  # Catalog availability only. One CLI invocation must select exactly one
+  # member with --trajectory; all repeats in that run use the same path.
+  trajectories: [straight, straight_pro, circle, ellipse, lemniscate, figure_eight]
+  repeats_per_controller_and_trajectory: 3
+  # The three paths have distinct initial points. The trajectory30 PPO backend
+  # deliberately has no hidden point-to-point repositioning mode. Operator
+  # placement uses y=-0.20 m while the sent reference begins at y=-0.50 m.
+  # The runner intentionally does not inspect either measured physical pose.
+  start_placement_mode: declared_initial_placement_no_pose_gate
+  inter_trial_interval_sec: 15.0
+  readiness_timeout_sec: 15.0
+  post_trajectory_record_sec: 7.0
+  # The longest current path is circle (137.15 s), plus recording/startup/stop allowance.
+  trial_time_budget_sec: 250.0
+  required_events:
+    - session_start
+    - trial_start
+    - phase_start
+    - trajectory_start
+    - trajectory_end
+    - phase_end
+    - trial_end
+  failure_events:
+    - safety_abort
+    - operator_abort
+    - state_timeout
+    - workspace_exit
+    - controller_fault
+
+metric_protocol:
+  statistical_unit: trial
+  raw_data_is_retained: true
+  evaluation_window:
+    start_after_event: trajectory_start
+    # Each trajectory is evaluated for its declared full duration: 30 s for
+    # straight/lemniscate, 90 s for straight_pro, 92.70 s for ellipse,
+    # 117.09 s for figure_eight, and 137.14 s for the three-turn circle.
+    duration_sec: trajectory_duration
+    resample_hz: 10.0
+    max_interpolation_gap_sec: 0.25
+    minimum_valid_fraction: 0.90
+  cross_track:
+    mode: time_local_monotonic_projection
+    reference_dense_sample_hz: 50.0
+    maximum_reference_time_offset_sec: 2.0
+  completion:
+    required_progress_fraction: 0.98
+    required_state_fresh_fraction: 0.90
+    status_max_age_sec: 0.25
+    require_ready: true
+    require_initialized: true
+    require_imu_fresh: true
+    require_depth_fresh: true
+    allowed_vision_modes: [fresh, coast]
+    forbidden_events: [safety_abort, operator_abort, state_timeout, workspace_exit, controller_fault]
+  report:
+    - cross_track_rmse_m
+    - cross_track_p95_m
+    - time_aligned_position_rmse_m
+    - depth_rmse_m
+    - completion_ratio
+    - action_energy
+    - action_smoothness
+    - thruster_saturation_fraction
+    - allocation_residual
+    - max_abs_roll_deg
+    - max_abs_pitch_deg
+
+recording:
+  # Optional read-only optical record.  The source is the detector's native
+  # unannotated raw image topic, not its AprilTag debug image.  When enabled,
+  # each T2 trial receives its own
+  #   trials/<session_id>/video/top_camera_raw.mp4
+  # and a same-name metadata JSON sidecar.  The CLI can override this with
+  # --record-video or --no-record-video without changing the protocol file.
+  top_camera_video:
+    enabled: false
+    image_topic: /finsrov/camera/raw/compressed
+    filename: top_camera_raw.mp4
+    # Match direct_apriltag_{rgb,ir}.yaml raw_image_rate_hz.  The detector
+    # JPEG-encodes raw frames only while this recorder is subscribed.
+    fps: 10.0
+    # Refuse to dispatch a trajectory if a pre-existing detector is still
+    # publishing its old low-rate raw stream; this prevents time-distorted MP4.
+    minimum_source_fps: 8.0
+    minimum_ready_frames: 5
+    codec: mp4v
+    startup_timeout_sec: 12.0
+    finalize_timeout_sec: 20.0
+  required_config_files:
+    - ros2_ws/src/experiment_recorder/config/t2_hardware_experiment.yaml
+    - ros2_ws/src/motion_control/config/FinsROV/ppo_trajectory_tracking_wrench6.yaml
+    - ros2_ws/src/hardware_bridge/config/finsrov_hardware_bridge_v4_pro1.yaml
+    - ros2_ws/src/state_estimation/config/state_fusion.yaml
+    - ros2_ws/src/state_estimation/config/state_fusion_extrinsics.yaml
+    - ros2_ws/src/state_estimation/config/pool_world.yaml

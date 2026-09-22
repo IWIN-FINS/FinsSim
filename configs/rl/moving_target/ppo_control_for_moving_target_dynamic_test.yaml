@@ -1,0 +1,43 @@
+base_config: ppo_control_for_moving_target_dynamic_smoke
+
+# ControlForPosition_Dynamic Linux Server smoke/test 配置。
+# Unity build 阶段不要给 Editor 加 -nographics；训练/测试运行阶段这里开启 no_graphics。
+#
+# 运行最小训练测试：
+# env -u DISPLAY CUDA_VISIBLE_DEVICES=1 NO_PROXY=localhost,127.0.0.1,::1 no_proxy=localhost,127.0.0.1,::1 \
+#   uv run --package finssim-cli finssim rl train -c configs/rl/moving_target/ppo_control_for_moving_target_dynamic_test.yaml
+
+experiment:
+  name: ppo_control_for_moving_target_dynamic_test_10Hz
+  seed: 42
+  tags:
+    - ppo
+    - position_control
+    - moving_target
+    - dynamic_scene
+    - observation13
+    - smoke_test
+  output_dir: artifacts/runs/rl/moving_target/ppo_control_for_moving_target_dynamic_test
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/ControlForPosition_Dynamic_10Hz_Server/ControlForPosition.x86_64
+    env_base_port: 11605
+    port_offset: 0
+    no_graphics: true
+    timeout_wait: 360
+    parallel_mode: multi_binary
+
+  train:
+    num_envs: 1
+    time_scale: 10.0
+  eval:
+    num_envs: 1
+    time_scale: 10.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    test: true
+    device: cuda
+    overwrite: true

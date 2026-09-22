@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinsSim MARL 配置读取流程 Instruction</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --accent: #1d4ed8;
+      --border: #dbe2ea;
+      --code: #eef2ff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #60a5fa;
+        --border: #334155;
+        --code: #1e293b;
+      }
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 22px;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+
+    h3 {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    p, li {
+      color: var(--text);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 14px;
+    }
+
+    code {
+      background: var(--code);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--code);
+      padding: 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    ol, ul {
+      padding-left: 22px;
+    }
+
+    .flow-step {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 12px;
+      background: rgba(29, 78, 216, 0.03);
+    }
+
+    .path {
+      display: inline-block;
+      margin-top: 6px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: rgba(29, 78, 216, 0.06);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>FinsSim MARL 配置读取流程 Instruction</h1>
+      <p class="muted">
+        这份文档只描述一件事：当你使用顶层 FinsSim 命令启动 MARL 训练时，配置是如何从
+        <code>configs/marl/*.yaml</code> 一层层读取并传递到最终训练脚本里的。
+      </p>
+    </section>
+
+    <section>
+      <h2>1. 先建立一个正确心智模型</h2>
+      <ul>
+        <li><code>configs/marl/*.yaml</code> 是顶层实验入口配置。</li>
+        <li><code>base_config</code> 表示后端内部的 Python 配置名称。</li>
+        <li>顶层 YAML 负责统一实验元信息、Unity 运行参数、以及后端 CLI 覆盖参数。</li>
+        <li>具体 MARL 场景参数、算法工厂方法、训练默认值，定义在 <code>python/finssim_marl/src/finssim_marl/training/</code> 下的 Python 配置模块中。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. 训练命令入口</h2>
+      <p>典型入口命令：</p>
+      <pre>uv run --package finssim-cli finssim marl train -c configs/marl/3chase1/end_to_end.yaml</pre>
+
+      <p>这个命令的控制流分成两层：</p>
+      <ol>
+        <li>顶层统一入口 <code>finssim-cli</code> 读取 YAML。</li>
+        <li>再把解析后的参数转成 MARL 后端命令，交给 <code>finssim-marl</code> 执行。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>3. 顶层 YAML 如何被读取</h2>
+
+      <div class="flow-step">
+        <h3>Step 1: CLI 进入统一后端调度逻辑</h3>
+        <p>MARL 训练命令会进入 <code>finssim_cli.main._run_backend()</code>。</p>
+        <div class="path">python/finssim_cli/src/finssim_cli/main.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 2: 读取 experiment YAML</h3>
+        <p><code>_run_backend()</code> 调用 <code>load_experiment_config(config)</code> 读取文件。</p>
+        <div class="path">python/finssim_core/src/finssim_core/config_loader.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 3: YAML 被解析成统一数据结构</h3>
+        <p>
+          <code>load_experiment_config()</code> 用 <code>yaml.safe_load()</code> 读取 YAML，
+          然后组装成 <code>FinsSimExperimentConfig</code>。
+        </p>
+        <div class="path">python/finssim_core/src/finssim_core/config_loader.py</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>YAML 字段</th>
+            <th>读取后进入哪里</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>base_config</code></td>
+            <td><code>FinsSimExperimentConfig.base_config</code></td>
+          </tr>
+          <tr>
+            <td><code>experiment</code></td>
+            <td><code>ExperimentConfig</code></td>
+          </tr>
+          <tr>
+            <td><code>unity</code></td>
+            <td><code>UnityRuntimeConfig</code></td>
+          </tr>
+          <tr>
+            <td><code>trainer</code></td>
+            <td><code>TrainerConfig</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. 顶层 YAML 里的四块配置分别做什么</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>块</th>
+            <th>职责</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>base_config</code></td>
+            <td>选择 MARL 后端中的哪一个 Python 场景配置对象。</td>
+          </tr>
+          <tr>
+            <td><code>experiment</code></td>
+            <td>定义实验名、seed、tags 等公共元信息。</td>
+          </tr>
+          <tr>
+            <td><code>unity</code></td>
+            <td>定义 Unity 运行时参数，比如 <code>env_path</code>、<code>num_envs</code>、<code>env_base_port</code>、<code>time_scale</code>。</td>
+          </tr>
+          <tr>
+            <td><code>trainer</code></td>
+            <td>定义后端类型和额外覆盖参数，其中 <code>trainer.overrides</code> 会被原样转发到后端 CLI。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>5. 顶层 CLI 如何把 YAML 转成后端命令</h2>
+      <p>
+        顶层入口不会自己训练。它的工作是把统一配置翻译成一个实际可执行的 MARL 后端命令。
+      </p>
+
+      <div class="flow-step">
+        <h3>Step 4: 生成 backend command</h3>
+        <p><code>finssim_cli.main._build_backend_command()</code> 负责把统一配置转成命令行参数。</p>
+        <div class="path">python/finssim_cli/src/finssim_cli/main.py</div>
+      </div>
+
+      <p>关键映射关系：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>统一配置字段</th>
+            <th>后端 CLI 参数</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>base_config</code></td>
+            <td><code>--config</code></td>
+          </tr>
+          <tr>
+            <td><code>experiment.name</code></td>
+            <td><code>--exp-name</code></td>
+          </tr>
+          <tr>
+            <td><code>unity.env_base_port</code></td>
+            <td><code>--env-base-port</code></td>
+          </tr>
+          <tr>
+            <td><code>unity.time_scale</code></td>
+            <td><code>--time-scale</code></td>
+          </tr>
+          <tr>
+            <td><code>unity.num_envs</code></td>
+            <td><code>--num-envs</code></td>
+          </tr>
+          <tr>
+            <td><code>unity.env_path</code></td>
+            <td><code>--env-path</code></td>
+          </tr>
+          <tr>
+            <td><code>unity.no_graphics</code></td>
+            <td>若为 false，则追加 <code>--show-graphics</code></td>
+          </tr>
+          <tr>
+            <td><code>trainer.overrides</code></td>
+            <td>追加为额外 CLI 参数，例如 <code>total_timesteps</code>、<code>device</code>、<code>overwrite</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. MARL 后端如何继续读取配置</h2>
+
+      <div class="flow-step">
+        <h3>Step 5: 进入 finssim-marl</h3>
+        <p>
+          顶层 CLI 最终会执行类似下面的命令：
+        </p>
+        <pre>uv run finssim-marl train --config &lt;base_config&gt; --exp-name &lt;experiment.name&gt; ...</pre>
+        <div class="path">python/finssim_marl/src/finssim_marl/cli.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 6: CLI wrapper 转发到真正训练脚本</h3>
+        <p><code>finssim_marl/cli.py</code> 根据子命令把执行转给 <code>scripts/train.py</code>。</p>
+        <div class="path">python/finssim_marl/scripts/train.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 7: 训练脚本先解析 CLI 参数</h3>
+        <p>
+          <code>scripts/train.py</code> 使用 <code>tyro.cli(TrainArgs)</code> 读取后端命令行参数。
+        </p>
+        <div class="path">python/finssim_marl/scripts/train.py</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>7. base_config 在 MARL 后端里如何解析</h2>
+
+      <div class="flow-step">
+        <h3>Step 8: 用 get_config(config_name) 查 Python 配置对象</h3>
+        <p>
+          训练脚本执行：
+        </p>
+        <pre>base_config = get_config(args.config)
+config = base_config.create_train_config()</pre>
+        <div class="path">python/finssim_marl/scripts/train.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 9: get_config() 从注册表取出 BaseConfig 对象</h3>
+        <p>
+          <code>get_config()</code> 定义在 <code>training/config.py</code>，从内部字典
+          <code>_CONFIGS_DICT</code> 中按名称查找。
+        </p>
+        <div class="path">python/finssim_marl/src/finssim_marl/training/config.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 10: 注册表来自各场景配置模块</h3>
+        <p>
+          当前 MARL 配置注册表通过 <code>get_chasing_configs()</code> 收集场景配置对象，
+          再放进 <code>_CONFIGS</code> 和 <code>_CONFIGS_DICT</code>。
+        </p>
+        <div class="path">python/finssim_marl/src/finssim_marl/training/config.py</div>
+        <div class="path">python/finssim_marl/src/finssim_marl/training/chasing_3_chase_1_config.py</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>8. Python 场景配置对象如何变成最终 TrainConfig</h2>
+
+      <div class="flow-step">
+        <h3>Step 11: BaseConfig 是场景级配置抽象</h3>
+        <p>
+          <code>BaseConfig</code> 里既有通用训练字段，也定义了几个工厂方法，比如：
+        </p>
+        <ul>
+          <li><code>create_train_config()</code></li>
+          <li><code>create_mappo_config()</code></li>
+          <li><code>create_algorithm()</code></li>
+          <li><code>create_rollout_buffer()</code></li>
+        </ul>
+        <div class="path">python/finssim_marl/src/finssim_marl/training/config.py</div>
+      </div>
+
+      <div class="flow-step">
+        <h3>Step 12: 场景子类展开为 TrainConfig</h3>
+        <p>
+          例如 <code>Chasing3Chase1Config.create_train_config()</code> 会把：
+        </p>
+        <ul>
+          <li>场景配置对象本身的字段</li>
+          <li><code>env_config</code> 中的环境参数</li>
+          <li><code>training_config</code> 中的训练参数</li>
+        </ul>
+        <p>合并后展开成训练脚本真正使用的 <code>TrainConfig</code>。</p>
+        <div class="path">python/finssim_marl/src/finssim_marl/training/chasing_3_chase_1_config.py</div>
+      </div>
+
+      <p>这一步之后，训练脚本拿到的是一个扁平的训练配置对象，而不是嵌套 YAML 结构。</p>
+    </section>
+
+    <section>
+      <h2>9. CLI 覆盖参数何时生效</h2>
+      <p>
+        在 <code>base_config.create_train_config()</code> 生成默认 <code>TrainConfig</code> 之后，
+        训练脚本还会调用 <code>merge_cli_args()</code>，把后端命令行参数覆盖到最终配置上。
+      </p>
+
+      <p>因此优先级可以这样理解：</p>
+      <pre>TrainConfig 默认值
+  &lt; Python BaseConfig / env_config / training_config
+  &lt; 顶层 FinsSim YAML 映射成的后端 CLI 参数
+  &lt; trainer.overrides 追加的后端 CLI 覆盖参数</pre>
+
+      <div class="path">python/finssim_marl/scripts/train.py</div>
+    </section>
+
+    <section>
+      <h2>10. 如何从 YAML 传入后端参数</h2>
+      <p>
+        如果你想传入类似 <code>--overwrite</code>、<code>--num-eval-envs=1</code> 这样的后端参数，
+        应该写在 <code>trainer.overrides</code> 下。
+      </p>
+
+      <pre>trainer:
+  backend: marl
+  overrides:
+    overwrite: true
+    num_eval_envs: 1</pre>
+
+      <p>顶层 CLI 会把它们转换成后端命令行参数：</p>
+      <pre>--overwrite --num-eval-envs 1</pre>
+
+      <p>转换规则：</p>
+      <ul>
+        <li><code>snake_case</code> key 会转成 <code>--kebab-case</code> 参数。</li>
+        <li>布尔值 <code>true</code> 会转成单独 flag，例如 <code>overwrite: true</code> 会变成 <code>--overwrite</code>。</li>
+        <li>数值和字符串会变成 <code>--flag value</code> 形式。</li>
+        <li>列表会展开成一个 flag 后接多个值。</li>
+      </ul>
+
+      <p>
+        限制也很明确：只有后端 CLI 自己声明过的参数，才能这样透传。对于 MARL，
+        这些参数首先要存在于 <code>TrainArgs</code> 中，后续还要被
+        <code>merge_cli_args()</code> 合并进最终配置对象。
+      </p>
+
+      <div class="path">python/finssim_cli/src/finssim_cli/main.py</div>
+      <div class="path">python/finssim_marl/scripts/train.py</div>
+    </section>
+
+    <section>
+      <h2>11. 训练真正使用配置的几个关键点</h2>
+      <ol>
+        <li><code>setup_run()</code> 根据 <code>config_name</code> 和 <code>exp_name</code> 确定 run 名称与输出目录。</li>
+        <li><code>resolve_output_paths()</code> 把日志、checkpoint、tensorboard 目录写回配置对象。</li>
+        <li><code>base_config.create_mappo_config(config)</code> 基于最终 TrainConfig 生成算法配置。</li>
+        <li><code>base_config.create_algorithm(...)</code> 创建算法实例。</li>
+        <li><code>base_config.create_rollout_buffer(...)</code> 创建 rollout buffer。</li>
+      </ol>
+
+      <p>
+        也就是说，<code>base_config</code> 不只是“一个字符串名字”，它在运行时会被解析成一个
+        带有工厂方法的配置对象，贯穿整个训练初始化阶段。
+      </p>
+    </section>
+
+    <section>
+      <h2>12. 一张简化流程图</h2>
+      <pre>configs/marl/*.yaml
+  |
+  v
+finssim_cli.main._run_backend()
+  |
+  v
+finssim_core.config_loader.load_experiment_config()
+  |
+  +-- base_config -> FinsSimExperimentConfig.base_config
+  +-- experiment  -> ExperimentConfig
+  +-- unity       -> UnityRuntimeConfig
+  +-- trainer     -> TrainerConfig
+  |
+  v
+finssim_cli.main._build_backend_command()
+  |
+  v
+uv run finssim-marl train --config <base_config> ...
+  |
+  v
+finssim_marl/scripts/train.py
+  |
+  v
+get_config(args.config)
+  |
+  v
+training/config.py::_CONFIGS_DICT
+  |
+  v
+具体场景配置对象 (BaseConfig 子类)
+  |
+  v
+create_train_config()
+  |
+  v
+最终 TrainConfig
+  |
+  v
+create_mappo_config() / create_algorithm() / create_rollout_buffer()</pre>
+    </section>
+
+    <section>
+      <h2>13. 作为 instruction，排查配置读取问题时应按这个顺序看</h2>
+      <ol>
+        <li>先看顶层 YAML：<code>base_config</code>、<code>experiment</code>、<code>unity</code>、<code>trainer.overrides</code>。</li>
+        <li>再看 <code>finssim_core/config_loader.py</code>，确认 YAML 字段是否被正确接收。</li>
+        <li>再看 <code>finssim_cli/main.py</code>，确认这些字段被翻译成了哪些后端 CLI 参数。</li>
+        <li>再看 <code>finssim_marl/scripts/train.py</code>，确认哪些 CLI 参数会覆盖训练配置。</li>
+        <li>最后看 <code>finssim_marl/training/config.py</code> 和具体场景配置模块，确认 <code>get_config()</code> 和 <code>create_train_config()</code> 的实际行为。</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>

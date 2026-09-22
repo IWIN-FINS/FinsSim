@@ -1,0 +1,6 @@
+<launch>
+    <!-- <param name="use_sim_time" value="true" /> -->
+    <node ns="/" name="adapter_server" pkg="grpc_ros_adapter" type="server.py" output="screen">
+        <rosparam file="$(find grpc_ros_adapter)/config/server.yaml" command="load" />
+    </node>
+</launch>

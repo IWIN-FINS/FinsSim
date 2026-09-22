@@ -1,0 +1,28 @@
+fish_truth_left_camera:
+  ros__parameters:
+    pnp_topic: /finsrov/vision/tag_poses_3d_camera
+    body_pose_topic: /finsrov/pose
+    output_topic: /finsrov/vision/fish_truth_left_camera
+    extrinsics_file: config/state_fusion_extrinsics.yaml
+
+    # 当前实机验证默认使用 17 号板。
+    fish_tag_id: 17
+    body_tag_ids: [15, 16]
+
+    # 输出坐标系：左目相机光学坐标系（OpenCV optical）
+    left_camera_frame_id: finsrov_stereo_left_optical
+    left_camera_translation_xyz: [0.30, 0.0, 0.0]
+    left_camera_rotation_mode: standard_optical_from_body
+
+    # 当前默认按“世界坐标下，鱼心在 tag 中心正下方 15 cm”处理。
+    # 如果以后要改成 rigid 的 tag-frame 偏移，可切到 tag_frame_offset。
+    target_point_mode: world_offset
+    fish_offset_world_xyz: [0.0, 0.0, -0.15]
+    fish_offset_tag_xyz: [0.0, 0.0, 0.0]
+
+    publish_rate_hz: 20.0
+    max_pose_match_dt_sec: 0.20
+    max_tag_age_sec: 0.50
+    max_body_pose_age_sec: 0.50
+    log_period_sec: 0.25
+    fallback_use_pnp_body_pose: true

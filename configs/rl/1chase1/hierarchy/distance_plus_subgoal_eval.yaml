@@ -1,0 +1,72 @@
+base_config: hierarchy_chase_physical_wrench_allocator_1chase1
+
+experiment:
+  name: 1chase1_hierarchy_distance_plus_subgoal_physical_wrench_allocator_eval
+  seed: 42
+  tags:
+    - rl
+    - single_agent
+    - 1chase1
+    - hierarchy
+    - traditional_pid
+    - reward_distance_plus_subgoal
+    - eval
+    - visual
+    - physical_wrench_allocator
+  output_dir: artifacts/evals/rl/1chase1/hierarchy_distance_plus_subgoal_physical_wrench_allocator
+
+reward:
+    protocol: one_chase_one_reward_v1
+    mode: distance_plus_subgoal
+    parameters:
+      distance_scale: 0.08
+      distance_range: 8.0
+      subgoal_to_prey_scale: 0.04
+      subgoal_to_prey_range: 1.5
+      subgoal_stale_timeout_sec: 0.5
+      per_step_penalty: -0.0005
+      angular_velocity_penalty_scale: 0.001
+      action_energy_penalty_scale: 0.0005
+      action_delta_penalty_scale: 0.0005
+      success_reward: 50.0
+      timeout_penalty: -5.0
+      out_of_bounds_penalty: -1.0
+      capture_distance: 0.8
+      stable_capture_relative_speed: 0.35
+      stable_capture_steps_required: 5
+
+
+env:
+  unity:
+    env_path: ../../artifacts/unity_builds/rl/linux/FinsROV/1Chase1_visual/1Chase1.x86_64
+    env_base_port: 16145
+    port_offset: 0
+    no_graphics: false
+    timeout_wait: 600
+    environment_parameters:
+      finsim_1chase1_observation_mode: 14
+    unity_additional_args:
+      - -fins-1chase1-mode
+      - direct14
+    parallel_mode: multi_area
+
+  train:
+    num_envs: 1
+    time_scale: 1.0
+  eval:
+    num_envs: 1
+    time_scale: 1.0
+    mode: asynchronous
+trainer:
+  backend: rl
+  overrides:
+    device: cuda
+    checkpoint_path: ../../artifacts/runs/rl/1chase1/hierarchy_distance_plus_subgoal_physical_wrench_allocator/checkpoints/best_model.zip
+    num_episodes: 3
+    window_width: 1280
+    window_height: 720
+
+# Eval semantics:
+# - 与 distance_plus_subgoal.yaml 共享同一 base_config / direct14 / reward 协议。
+# - 使用 visual build，单环境实时回放。
+# - checkpoint_path 来自 physical_wrench_allocator 训练 run 的 best_model.zip。

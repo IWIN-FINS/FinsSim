@@ -1,0 +1,18 @@
+base_config: chasing_3chase1
+
+experiment:
+  name: benchmarl_chasing_3chase1_smoke
+  seed: 42
+  tags: [benchmarl, torchrl, smoke]
+
+unity:
+  env_path: null
+  num_envs: 1
+  env_base_port: 5005
+  time_scale: 10.0
+  no_graphics: true
+
+trainer:
+  backend: benchmarl
+  overrides:
+    dry_run: true
